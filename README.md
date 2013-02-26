@@ -1,3 +1,5 @@
+![Genie Logo](https://dl.dropbox.com/u/116686/genie-logo.png "Genie: Genomics database updater")
+
 #Genie
 =====
 
