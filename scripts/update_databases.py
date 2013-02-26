@@ -210,7 +210,17 @@ class Fetcher(object):
         except ftplib.all_errors, e:
             self.warn_error(ftp_ncbi, e)
 
-    def gatk(self, files_to_get, version="latest", assembly="hg19", username="gsapubftp-anonymous"):
+    def gatk(self, file_codes, version="latest", assembly="hg19", username="gsapubftp-anonymous"):
+
+        # Convert between short codes and filename bases
+        converter = {
+            "1000g_indels": "1000G_phase1.indels.{}.vcf",
+            "mills": "Mills_and_1000G_gold_standard.indels.{}.vcf",
+            "dbsnp": "dbsnp_137.{}.vcf",
+            "hapmap": "hapmap_3.3.{}.vcf",
+            "1000g": "1000G_omni2.5.{}.vcf",
+            "dnsnp_ex": "dbsnp_137.{}.excluding_sites_after_129.vcf"
+        }
 
         try:
             ftp_gatk = FTP("ftp.broadinstitute.org")
@@ -234,10 +244,14 @@ class Fetcher(object):
             base_path = "bundle/{0}/{1}/".format(version, assembly)
 
             # Get the files and save as binary (GZIP archives)
-            for file_name in files_to_get:
+            for code in file_codes:
                 # Add the version of the file if possible (remove gz just in case)
-                filename = file_name.format(assembly).replace(".gz", "")
-                filename_gz = filename + ".gz"
+                # If the code is not recognized => just skip
+                try:
+                    filename = converter[code].format(assembly).replace(".gz", "")
+                    filename_gz = filename + ".gz"
+                except KeyError:
+                    print("Sorry but that short code ({}) wasn't recognized. Skipping.".format(code))
 
                 # Check if the file already exists
                 if self.this_file_exists(self.base_ref_path + filename):
@@ -290,7 +304,7 @@ def main(args):
 
     if args.gatk:
         # Get all the GATK curated files
-        fetcher.gatk(args.gatk_files, version=args.gatk_version, assembly=args.gatk_assembly)
+        fetcher.gatk(args.gatk_codes, version=args.gatk_version, assembly=args.gatk_assembly)
 
     if args.ucsc:
         # Get the RefSeq FASTA file from UCSC
@@ -320,7 +334,7 @@ if __name__ == "__main__":
     parser.add_argument('-gv', '--gatk_version', type=str, default="latest")
     # Input the actual file names since the request will be from a script that
     # already knows which file it's looking for.
-    parser.add_argument('-gf', '--gatk_files', type=str, nargs="+")
+    parser.add_argument('-gf', '--gatk_codes', type=str, nargs="+")
     parser.add_argument('-ga', '--gatk_assembly', type=str, default="hg19")
 
     # Option to force overwrite existing files

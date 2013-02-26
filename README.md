@@ -3,19 +3,6 @@
 </div>
 
 ## Genie: A Genomics Database Updater
-
-__Currently supports the following Homo sapiens databases__:
-* Ensembl reference genomic sequence ("Homo_sapiens.GRCh37.70_chr.fasta")
-* UCSC reference genomic sequence ("Homo_sapiens.hg19_nochr.fasta")
-* Several GATK provided files
-** 1000G_phase1.indels.{}.vcf
-** Mills_and_1000G_gold_standard.indels.{}.vcf
-** dbsnp_137.{}.vcf
-** hapmap_3.3.{}.vcf
-** 1000G_omni2.5.{}.vcf
-** dbsnp_137.{}.excluding_sites_after_129.vcf
-* The CCDS curated and non-redundant database from NCBI ("CCDS.{}_nochr.txt")
-
 The main script is callabe from the terminal and the user requests which files to be checked and potentially updated/download.
 
 N.B. The initial release is focused on the Swedish **Uppmax** data cluster but a more generalized version is in the works.
@@ -51,7 +38,16 @@ The second source for getting the reference human genome sequence in FASTA forma
 ```
 
 **GATK**
-GATK provides a number of valuable files that they recommend be used as input for running the GATK software. 
+GATK provides a number of valuable files that they recommend be used as input for running the GATK software.
+
+* 1000G_phase1.indels.{}.vcf => 1000g_indels
+* Mills_and_1000G_gold_standard.indels.{}.vcf => mills
+* dbsnp_137.{}.vcf => dbsnp
+* hapmap_3.3.{}.vcf => hapmap
+* 1000G_omni2.5.{}.vcf => 1000g
+* dbsnp_137.{}.excluding_sites_after_129.vcf => dnsnp_ex
+
+The files have made up short codes that allow for simple input in a bash script.
 
 **Force update**
 It can sometimes be handy to force overwriting existing files when scripts behave irrationally. By providing the option "-f" the script will not worry about what files are already in your reference directory and simply overwrite any files you specify for download. At this point it's not possible to gain more fine grain control of which files should be forced to download.
