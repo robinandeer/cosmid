@@ -47,7 +47,11 @@ GATK provides a number of valuable files that they recommend be used as input fo
 * 1000G_omni2.5.{}.vcf => 1000g
 * dbsnp_137.{}.excluding_sites_after_129.vcf => dnsnp_ex
 
-The files have made up short codes that allow for simple input in a bash script.
+The files have made up short codes that allow for simple input in a bash script. There are a couple of other options as well such like the GATK version and which assembly "GRCh37/hg19" to use. The default is either the latest and the "hg19" genome assembly. Really the only options for assembly is "hg18-19" and "GRCh36-37" (no versions).
+
+```bash
+	python update_databases.py -g -gv 2.2 -ga "GRCh37" -gf mills hapmap dbsnp
+```
 
 **Force update**
 It can sometimes be handy to force overwriting existing files when scripts behave irrationally. By providing the option "-f" the script will not worry about what files are already in your reference directory and simply overwrite any files you specify for download. At this point it's not possible to gain more fine grain control of which files should be forced to download.
