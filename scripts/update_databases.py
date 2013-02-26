@@ -28,11 +28,12 @@ class Fetcher(object):
             "dbsnp_137.{0}.excluding_sites_after_129.vcf.gz"
         * hg19/18 etc reference genome from UCSC
     """
-    def __init__(self, username, project="b2010080"):
+    def __init__(self, username, project="b2010080", force=False):
         super(Fetcher, self).__init__()
 
         self.username = username
         self.project = project
+        self.force = force
 
         self.logger = logging.getLogger()
 
@@ -42,7 +43,13 @@ class Fetcher(object):
 
     def this_file_exists(self, path):
         """Does a specified file exist?"""
-        return os.path.exists(path)
+        # If the user wants to force overwrite, let her.
+        if not self.force:
+            answer = os.path.exists(path)
+        else:
+            answer = False
+
+        return answer
 
     def warn_error(self, ftp, e):
         # Warn the user in standardized way
@@ -271,7 +278,7 @@ class Fetcher(object):
 
 def main(args):
 
-    fetcher = Fetcher(args.email, project=args.project)
+    fetcher = Fetcher(args.email, project=args.project, force=args.force)
 
     if args.ensembl:
         # Get Ensembl fasta reference
@@ -315,6 +322,9 @@ if __name__ == "__main__":
     # already knows which file it's looking for.
     parser.add_argument('-gf', '--gatk_files', type=str, nargs="+")
     parser.add_argument('-ga', '--gatk_assembly', type=str, default="hg19")
+
+    # Option to force overwrite existing files
+    parser.add_argument('f', '--force', action='store_true', default=False)
 
     args = parser.parse_args()
     main(args)
