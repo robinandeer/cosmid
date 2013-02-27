@@ -379,7 +379,7 @@ if __name__ == "__main__":
     parser.add_argument('-ccut', '--post_cut', type=str, default=False)
 
     # Option to force overwrite existing files
-    parser.add_argument('f', '--force', action='store_true', default=False)
+    parser.add_argument('-f', '--force', action='store_true', default=False)
 
     args = parser.parse_args()
     main(args)
