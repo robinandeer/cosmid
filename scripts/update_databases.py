@@ -11,6 +11,7 @@ import sys
 from glob import glob
 import logging
 import subprocess
+from pybedtools import BedTool
 
 
 class Fetcher(object):
@@ -289,6 +290,36 @@ class Fetcher(object):
         except ftplib.all_errors, e:
             self.warn_error(ftp_ucsc, e)
 
+    def converter(self, from_path, to_path, cut=False):
+        """
+            The eqivalent of running:
+            intersectBed -a from_path.bed -b to_path.bed -wa -wb | cut -f1,2,3,5,6,7,8 > conversion_filename.bed
+        """
+
+        from_file = from_path.split("/")[-1]
+        to_file = to_path.split("/")[-1]
+
+        conversion_filename = from_file.replace(".bed", "") + "__" + to_file
+        if self.this_file_exists(self.base_ref_path + conversion_filename):
+            print("{} already exists".format(conversion_filename), end="\n")
+
+        else:
+            from_elements_bt = BedTool(from_path)
+            to_elements_bt = BedTool(to_path)
+
+            # SureSelect targets files contain a lot of unessesary information
+            if cut:
+                from_elements_bt.intersect(to_elements_bt, wa=True, wb=True).saveas(self.base_ref_path + "temp_" + conversion_filename)
+
+                with open(self.base_ref_path + conversion_filename, "w") as handle:
+                    subprocess.call(['cut', '-f{}'.format(cut), self.base_ref_path + "temp_" + conversion_filename], stdout=handle)
+
+                os.remove(self.base_ref_path + "temp_" + conversion_filename)
+
+            else:
+
+                from_elements_bt.intersect(to_elements_bt, wa=True, wb=True).saveas(self.base_ref_path + conversion_filename)
+
 
 def main(args):
 
@@ -309,6 +340,10 @@ def main(args):
     if args.ucsc:
         # Get the RefSeq FASTA file from UCSC
         fetcher.ucsc(args.ucsc_assembly)
+
+    if args.convert:
+        # Map between to genetic elements (BED files)
+        fetcher.converter(args.from_path, args.to_path, cut=args.post_cut)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -336,6 +371,12 @@ if __name__ == "__main__":
     # already knows which file it's looking for.
     parser.add_argument('-gf', '--gatk_codes', type=str, nargs="+")
     parser.add_argument('-ga', '--gatk_assembly', type=str, default="hg19")
+
+    # Converter
+    parser.add_argument('-convert', '--convert', action='store_true')
+    parser.add_argument('-cfrom', '--from_path', type=str)
+    parser.add_argument('-cto', '--from_path', type=str)
+    parser.add_argument('-ccut', '--post_cut', type=str, default=False)
 
     # Option to force overwrite existing files
     parser.add_argument('f', '--force', action='store_true', default=False)
