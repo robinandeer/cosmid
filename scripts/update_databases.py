@@ -374,8 +374,8 @@ if __name__ == "__main__":
 
     # Converter
     parser.add_argument('-convert', '--convert', action='store_true')
-    parser.add_argument('-cfrom', '--from_path', type=str)
-    parser.add_argument('-cto', '--from_path', type=str)
+    parser.add_argument('-cfrom', '--from_path')
+    parser.add_argument('-cto', '--from_path')
     parser.add_argument('-ccut', '--post_cut', type=str, default=False)
 
     # Option to force overwrite existing files
