@@ -52,6 +52,8 @@ class Fetcher(object):
 
         if response == 0:
             print("{} downloaded and extracted successfully!".format(filename.replace(".gz", "").replace(".tar", "")), end="\n")
+        else:
+            print("{} failed decryption. Please do it manually.".format(filename))
 
     def connect(self, server, username, password):
         try:
