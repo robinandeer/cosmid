@@ -1,5 +1,5 @@
 <div style="width: 600px; margin: 0 auto;">
-	<img src="https://dl.dropbox.com/u/116686/genie-logo.png" width="600" height="400" alt="Genie: Genomics database updater">
+	<img src="https://raw.github.com/robinandeer/Genie/master/assets/genie-logo.png" width="600" height="400" alt="Genie: Genomics database updater">
 </div>
 
 ## Genie: A Genomics Database Updater
