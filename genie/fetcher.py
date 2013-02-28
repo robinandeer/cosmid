@@ -156,7 +156,7 @@ class Fetcher(object):
                     # not have to check that number also
                     ftp_ncbi.retrbinary("RETR pub/CCDS/current_human/CCDS.current.txt", open(self.base_ref_path + savename, "wb").write)
                 else:
-                    ftp_ncbi.retrbinary("RETR pub/CCDS/archive/Hs" + ccds_release + "/CCDS.current.txt", open(self.base_ref_path + savename, "wb").write)
+                    ftp_ncbi.retrbinary("RETR pub/CCDS/archive/" + ccds_release + "/CCDS.current.txt", open(self.base_ref_path + savename, "wb").write)
 
                 print("{} downloaded successfully!".format(savename), end="\n")
 
