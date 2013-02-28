@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import sys
 import os
 import ftplib
 from ftplib import FTP
@@ -42,9 +41,6 @@ class Fetcher(object):
         # Always best to close
         ftp.close()
 
-        # Exit script
-        sys.exit(1)
-
     def unzip(self, filename):
         #gzip -d Homo_sapiens.GRCh37.70.dna.chromosome.22.fa.gz
         if filename.find("tar") != -1:
@@ -57,20 +53,41 @@ class Fetcher(object):
         if response == 0:
             print("{} downloaded and extracted successfully!".format(filename.replace(".gz", "").replace(".tar", "")), end="\n")
 
+    def connect(self, server, username, password):
+        try:
+            # Start up and login
+            ftp = FTP(server)
+            ftp.login(username, password)
+
+            # Return the FTP when ready
+            return ftp
+
+        except ftplib.all_errors, e:
+            # This could be a login error
+            if e.message.find("530") != -1:
+                print("Your login information wasn't valid for: {}".format(server))
+            else:
+                print("FTP error for {0}, message: {1}".format(server, e.message))
+
+            # Always best to close connection
+            ftp.close()
+
+            # Return "not good"
+            return -1
+
     def ensembl(self, requested_assembly):
 
         try:
             # Log on to the Ensembl FTP
-            ftp_ensembl = FTP("ftp.ensembl.org")
-            ftp_ensembl.login()
+            ftp = self.connect("ftp.ensembl.org", "", "")
 
             # Print welcome message
-            print(ftp_ensembl.getwelcome(), end="\n")
+            print(ftp.getwelcome(), end="\n")
 
             if requested_assembly == "latest":
 
                 # Get the latest assembly version, GRCh37 is implied (until they release 38 ...)
-                releases = [dirname.replace("release-", "") for dirname in ftp_ensembl.nlst("pub") if dirname.find("release") != -1]
+                releases = [dirname.replace("release-", "") for dirname in ftp.nlst("pub") if dirname.find("release") != -1]
                 releases.sort()  # Just to be sure
                 latest_ensembl_release = releases[-1]
 
@@ -94,7 +111,7 @@ class Fetcher(object):
                 path_to_fasta_files = base_path.format(release_path)
 
                 # Look at all the files in the dir
-                file_list = ftp_ensembl.nlst(path_to_fasta_files)
+                file_list = ftp.nlst(path_to_fasta_files)
 
                 # Get the correct file name (independent of release number, if you want the latest)
                 for file_name in file_list:
@@ -105,30 +122,29 @@ class Fetcher(object):
                         break
 
                 # Request and get the reference genome file from the server, catch the response
-                ftp_ensembl.retrbinary("RETR {0}{1}".format(path_to_fasta_files, fasta_name), open(self.base_ref_path + fasta_filename + ".gz", "wb").write)
+                ftp.retrbinary("RETR {0}{1}".format(path_to_fasta_files, fasta_name), open(self.base_ref_path + fasta_filename + ".gz", "wb").write)
                 self.unzip(fasta_filename + ".gz")
 
-            ftp_ensembl.close()
+            ftp.close()
 
         except ftplib.all_errors, e:
-            self.warn_error(ftp_ensembl, e)
+            self.warn_error(ftp, e)
 
     def ncbi(self, ccds_release):
 
         try:
             # Get the awesome CCDS database
-            ftp_ncbi = FTP("ftp.ncbi.nih.gov")
-            ftp_ncbi.login("anonymous", self.username)
+            ftp = self.connect("ftp.ncbi.nih.gov", "anonymous", self.username)
 
             # Print welcome message
-            print(ftp_ncbi.getwelcome(), end="\n")
+            print(ftp.getwelcome(), end="\n")
 
             # To read the info file
             ccds_info = StringIO()
             if ccds_release == "latest":
-                ftp_ncbi.retrbinary("RETR pub/CCDS/current_human/BuildInfo.current.txt", ccds_info.write)
+                ftp.retrbinary("RETR pub/CCDS/current_human/BuildInfo.current.txt", ccds_info.write)
             else:
-                ftp_ncbi.retrbinary("RETR pub/CCDS/archive/" + ccds_release + "/BuildInfo.current.txt", ccds_info.write)
+                ftp.retrbinary("RETR pub/CCDS/archive/" + ccds_release + "/BuildInfo.current.txt", ccds_info.write)
 
             # For naming the output file
             for line in ccds_info.getvalue().split("\n"):
@@ -154,16 +170,16 @@ class Fetcher(object):
                 if ccds_release == "latest":
                     # The relase is tied to NCBI version so I separate these to
                     # not have to check that number also
-                    ftp_ncbi.retrbinary("RETR pub/CCDS/current_human/CCDS.current.txt", open(self.base_ref_path + savename, "wb").write)
+                    ftp.retrbinary("RETR pub/CCDS/current_human/CCDS.current.txt", open(self.base_ref_path + savename, "wb").write)
                 else:
-                    ftp_ncbi.retrbinary("RETR pub/CCDS/archive/" + ccds_release + "/CCDS.current.txt", open(self.base_ref_path + savename, "wb").write)
+                    ftp.retrbinary("RETR pub/CCDS/archive/" + ccds_release + "/CCDS.current.txt", open(self.base_ref_path + savename, "wb").write)
 
                 print("{} downloaded successfully!".format(savename), end="\n")
 
-            ftp_ncbi.close()
+            ftp.close()
 
         except ftplib.all_errors, e:
-            self.warn_error(ftp_ncbi, e)
+            self.warn_error(ftp, e)
 
     def gatk(self, file_codes, version="latest", assembly="hg19", username="gsapubftp-anonymous"):
 
@@ -178,12 +194,12 @@ class Fetcher(object):
         }
 
         try:
-            ftp_gatk = FTP("ftp.broadinstitute.org")
-            ftp_gatk.login(username, "")
+            # Connect to the server
+            ftp = self.connect("ftp.broadinstitute.org", username, "")
 
             if version == "latest":
                 # List all versions (floats)
-                gatk_versions = [float(ver.replace("bundle/", "")) for ver in ftp_gatk.nlst("bundle")]
+                gatk_versions = [float(ver.replace("bundle/", "")) for ver in ftp.nlst("bundle")]
 
                 # Sort acending
                 gatk_versions.sort()
@@ -213,20 +229,20 @@ class Fetcher(object):
                     print("{} already exists.".format(filename), end="\n")
                 else:
                     print("Downloading {} ...".format(filename_gz), end="\n")
-                    ftp_gatk.retrbinary("RETR " + base_path + filename_gz, open(self.base_ref_path + filename_gz, "wb").write)
+                    ftp.retrbinary("RETR " + base_path + filename_gz, open(self.base_ref_path + filename_gz, "wb").write)
 
                     self.unzip(filename_gz)
 
+            ftp.close()
+
         except ftplib.all_errors, e:
-            self.warn_error(ftp_gatk, e)
+            self.warn_error(ftp, e)
 
     def ucsc(self, assembly):
 
         try:
             # Connect and provide user info
-            ftp_ucsc = FTP("hgdownload.cse.ucsc.edu")
-            # [username: anonymous, password: your email address]
-            ftp_ucsc.login("anonymous", self.username)
+            ftp = self.connect("hgdownload.cse.ucsc.edu", "anonymous", self.username)
 
             savename = "Homo_sapiens.{}_chr.fasta".format(assembly)
             savename_gz = savename + ".tar.gz"
@@ -237,12 +253,14 @@ class Fetcher(object):
             else:
                 # Download the big FASTA file
                 print("Downloading {} ...".format(savename_gz), end="\n")
-                ftp_ucsc.retrbinary("RETR goldenPath/" + assembly + "/bigZips/chromFa.tar.gz", open(self.base_ref_path + savename_gz, "wb").write)
+                ftp.retrbinary("RETR goldenPath/" + assembly + "/bigZips/chromFa.tar.gz", open(self.base_ref_path + savename_gz, "wb").write)
 
                 self.unzip(savename_gz)
 
+            ftp.close()
+
         except ftplib.all_errors, e:
-            self.warn_error(ftp_ucsc, e)
+            self.warn_error(ftp, e)
 
     def converter(self, from_path, to_path, cut=False):
         """

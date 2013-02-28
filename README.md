@@ -13,7 +13,7 @@ N.B. The initial release is focused on the Swedish **Uppmax** data cluster but a
 For anonymous FTP access the servers will often accept your email adress as either username or password. This is a *required* option.
 
 ```bash
-	python update_databases.py -e "ptanderson@magnolia.org"
+	python update_databases.py -email "ptanderson@magnolia.org"
 ```
 
 **Ensembl**
