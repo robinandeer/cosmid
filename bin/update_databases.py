@@ -31,7 +31,7 @@ def main(args):
 
     if args.gccontent:
         # Add some misc information to a BED file (GC content etc.)
-        fetcher.converter(args.bedpath, assembly=args.gcassembly, reference_path=args.referencefasta, out_path=args.gcoutpath)
+        fetcher.gc_content(args.bedpath, assembly=args.gcassembly, reference_path=args.referencefasta, out_path=args.gcoutpath)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
