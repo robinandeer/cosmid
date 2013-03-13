@@ -29,6 +29,10 @@ def main(args):
         # Map between to genetic elements (BED files)
         fetcher.converter(args.from_path, args.to_path, cut=args.post_cut)
 
+    if args.gccontent:
+        # Add some misc information to a BED file (GC content etc.)
+        fetcher.gc_content(args.bedpath, assembly=args.gcassembly, reference_path=args.referencefasta, out_path=args.gcoutpath)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -61,6 +65,13 @@ if __name__ == "__main__":
     parser.add_argument('-cfrom', '--from_path', type=str)
     parser.add_argument('-cto', '--to_path', type=str)
     parser.add_argument('-ccut', '--post_cut', type=str, default=False)
+
+    # GC content generator
+    parser.add_argument('-gc', '--gccontent', action='store_true')
+    parser.add_argument('-gcbed', '--bedpath', type=str)
+    parser.add_argument('-gcref', '--referencefasta', type=str, default=None)
+    parser.add_argument('-gca', '--gcassembly', type=str, default="GRCh37.70")
+    parser.add_argument('-gcout', '--gcoutpath', type=str, default=None)
 
     # Option to force overwrite existing files
     parser.add_argument('-f', '--force', action='store_true', default=False)

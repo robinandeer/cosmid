@@ -9,7 +9,7 @@ config = {
     'url': 'https://github.com/robinandeer/Genie.',
     'download_url': 'https://github.com/robinandeer/Genie/archive/master.zip',
     'author_email': 'robin.andeer@scilifelab.se',
-    'version': '0.3',
+    'version': '0.3.2',
     'install_requires': ['nose'],
     'packages': ['genie'],
     'scripts': ['bin/update_databases.py'],
