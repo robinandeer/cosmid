@@ -294,14 +294,14 @@ class Fetcher(object):
 
                 from_elements_bt.intersect(to_elements_bt, wa=True, wb=True).saveas(self.base_ref_path + conversion_filename)
 
-    def gc_content(self, bed_path, assembly="GRCh37.70", reference_path="Homo_sapiens.{}_nochr.fasta", out_path=None, include_seq=False):
+    def gc_content(self, bed_path, assembly="GRCh37.70", reference_path=None, out_path=None):
         """
         Takes a BED file and adds the GC content information as extra columns and saves as a new file.
         """
 
         if not reference_path:
             # Unless the DNA reference file is provided, attempt to get one form the file system
-            reference_path = self.base_ref_path + reference_path.format(assembly)
+            reference_path = "{0}Homo_sapiens.{1}_nochr.fasta".format(self.base_ref_path, assembly)
 
         # Make sure that the reference file exists
         if not self.this_file_exists(reference_path):
@@ -326,4 +326,4 @@ class Fetcher(object):
             regions = BedTool(bed_path)
 
             # Run the BEDTools "nuc" command and save directly to a file
-            regions.nucleotide_content(fi=reference_path, seq=include_seq).saveas(out_path)
+            regions.nucleotide_content(fi=reference_path).saveas(out_path)
