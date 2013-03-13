@@ -23,8 +23,20 @@ class Fetcher(object):
     def base_ref_path(self):
         return "/bubo/proj/" + self.project + "/private/wgs_wf_references/"
 
-    def this_file_exists(self, path):
+    def this_file_exists(self, path, required=False):
         """Does a specified file exist?"""
+
+        # For reference files that are needed to perform the requested convertion/calculations
+        if required:
+
+            if not os.path.exists(path):
+                # If not: ask the user if she would like to download it now
+                user_wants_to_download = raw_input("The DNA reference file doesn't exist. Do you want to download it now? [y/n] ")
+                if user_wants_to_download in ["yes", "y", "Y"]:
+                    return False
+                else:
+                    return False
+
         # If the user wants to force overwrite, let her.
         if not self.force:
             answer = os.path.exists(path)
@@ -305,13 +317,7 @@ class Fetcher(object):
 
         # Make sure that the reference file exists
         if not self.this_file_exists(reference_path):
-
-            # If not: ask the user if she would like to download it now
-            user_wants_to_download = raw_input("The DNA reference file doesn't exist. Do you want to download it now? [y/n] ")
-            if user_wants_to_download in ["yes", "y", "Y"]:
-                return -1
-            else:
-                return -1
+            return -1
 
         if not out_path:
             # Output the file using the input name + "_gccontent" to signify the difference
