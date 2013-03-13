@@ -7,6 +7,7 @@ from ftplib import FTP
 from StringIO import StringIO
 from pybedtools import BedTool
 import subprocess
+import csv
 
 
 class Fetcher(object):
@@ -333,3 +334,35 @@ class Fetcher(object):
 
             # Run the BEDTools "nuc" command and save directly to a file
             regions.nucleotide_content(fi=reference_path).saveas(out_path)
+
+    def chromosomes(self, prepend="chr"):
+        # List all chromosomes
+        chrom_list = range(1, 23) + ["X", "Y"]
+        return ["{0}{1}".format(prepend, str(chrom)) for chrom in chrom_list]
+
+    def convert2bed(self, bed_path, remove_wierd_chr=False, out_path=None):
+        """
+        Since BED format is defined with chrmosome positions that are 0-based (start) and 1-based (end)
+        it's sometimes needed to convert a file to the proper BED format. For example when downloading
+        gene coordinates from Biomart.
+        """
+
+        # Allow parsing of huge files
+        csv.field_size_limit(1000000000)
+
+        # Unless otherwise specified; overwrite the current file
+        if not out_path:
+            out_path = bed_path
+
+        # All the normal chromosomes (the once present in the capture kits)
+        chromosomes = self.chromosomes(prepend="")
+
+        with open(bed_path, "r") as handle:
+            if remove_wierd_chr:
+                lines = ["\t".join([row[0]] + [str(int(row[1]) - 1)] + row[2:]) for row in csv.reader(handle, dialect="excel-tab") if row[0] in chromosomes]
+            else:
+                lines = ["\t".join([row[0]] + [str(int(row[1]) - 1)] + row[2:]) for row in csv.reader(handle, dialect="excel-tab")]
+
+        with open(out_path, "w") as handle:
+
+            handle.write("\n".join(lines))
