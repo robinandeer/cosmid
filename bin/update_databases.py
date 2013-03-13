@@ -81,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument('-c2b', '--convert2bed', action='store_true')
     parser.add_argument('-c2bbed', '--convert2bedInput', type=str)
     parser.add_argument('-chr', '--removechrs', action='store_true')
-    parser.add_argument('c2bout', '--convert2bedOutpath', type=str, default=None)
+    parser.add_argument('-c2bout', '--convert2bedOutpath', type=str, default=None)
 
     # Option to force overwrite existing files
     parser.add_argument('-f', '--force', action='store_true', default=False)
