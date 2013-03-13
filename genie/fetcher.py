@@ -293,3 +293,37 @@ class Fetcher(object):
             else:
 
                 from_elements_bt.intersect(to_elements_bt, wa=True, wb=True).saveas(self.base_ref_path + conversion_filename)
+
+    def gc_content(self, bed_path, assembly="GRCh37.70", reference_path="Homo_sapiens.{}_nochr.fasta", out_path=None, include_seq=False):
+        """
+        Takes a BED file and adds the GC content information as extra columns and saves as a new file.
+        """
+
+        if not reference_path:
+            # Unless the DNA reference file is provided, attempt to get one form the file system
+            reference_path = self.base_ref_path + reference_path.format(assembly)
+
+        # Make sure that the reference file exists
+        if not self.this_file_exists(reference_path):
+
+            # If not: ask the user if she would like to download it now
+            user_wants_to_download = raw_input("The DNA reference file doesn't exist. Do you want to download it now? [y/n] ")
+            if user_wants_to_download in ["yes", "y", "Y"]:
+                return -1
+            else:
+                return -1
+
+        if not out_path:
+            # Output the file using the input name + "_gccontent" to signify the difference
+            out_filename = "{}_gccontent.bed".format(bed_path.replace(".bed", ""))
+            out_path = "{0}{1}".format(self.base_ref_path, out_filename)
+
+        # Check if the file already has been generated
+        if self.this_file_exists(out_path):
+            print("{} already exists".format(out_path), end="\n")
+        else:
+            # Load in the file with regions to determine GC content for
+            regions = BedTool(bed_path)
+
+            # Run the BEDTools "nuc" command and save directly to a file
+            regions.nucleotide_content(fi=reference_path, seq=include_seq).saveas(out_path)
