@@ -22,7 +22,7 @@ class Fetcher(object):
 
     @property
     def base_ref_path(self):
-        return "/bubo/proj/" + self.project + "/private/wgs_wf_references/"
+        return "/proj/" + self.project + "/private/wgs_wf_references/"
 
     def this_file_exists(self, path, required=False):
         """Does a specified file exist?"""
@@ -321,8 +321,11 @@ class Fetcher(object):
             return -1
 
         if not out_path:
-            # Output the file using the input name + "_gccontent" to signify the difference
-            out_filename = "{}_gccontent.bed".format(bed_path.replace(".bed", ""))
+            # Extract the filename from the bed_path and remove the file extension
+            in_filename = bed_path.split("/")[-1].replace(".bed", "")
+
+            # Output the file using the input file name + "_gccontent" to signify the difference
+            out_filename = "{}_gccontent.bed".format(in_filename)
             out_path = "{0}{1}".format(self.base_ref_path, out_filename)
 
         # Check if the file already has been generated
