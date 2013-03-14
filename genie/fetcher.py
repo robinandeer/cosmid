@@ -381,31 +381,34 @@ class Fetcher(object):
 
         The order is 0-based. It also continues from the main file to the misc file.
         If main has 3 columns and misc has 4 columns, the misc column IDs would be [3,4,5,6].
+
+        It currently doesn't handle header comments that only appear in one file.
         """
 
         if not out_path:
             out_path = main_path
 
-        lines = []
-
         with open(main_path, "r") as main:
             if misc_path:
                 with open(misc_path, "r") as misc:
-
-                    for main_row, misc_row in zip(csv.reader(main, dialect="excel-tab"), csv.reader(misc, dialect="excel-tab")):
-                        line = []
-                        for i in order:
-                            main_len = len(main_row)
-                            if i > main_len:
-                                line.append(misc_row[i-main_len])
-                            else:
-                                line.append(main_row[i])
-
-                        lines.append("\t".join(line))
+                    lines = [self._addComplexLine(main_row, misc_row, order) for main_row, misc_row in zip(csv.reader(main, dialect="excel-tab"), csv.reader(misc, dialect="excel-tab"))]
 
             else:
-                for row in csv.reader(main, dialect="excel-tab"):
-                    lines.append("\t".join([row[i] for i in order]))
+                lines = [self._addLine(row, order) for row in csv.reader(main, dialect="excel-tab")]
 
         with open(out_path, "w") as out:
             out.write("\n".join(lines))
+
+    def _addLine(self, row, order):
+        return "\t".join([row[i] for i in order])
+
+    def _addComplexLine(self, main_row, misc_row, order):
+        line = []
+        for i in order:
+            main_len = len(main_row)
+            if i > main_len:
+                line.append(misc_row[i-main_len])
+            else:
+                line.append(main_row[i])
+
+        return "\t".join(line)

@@ -15,7 +15,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Reorganize columns in one or two files
-    parser.add_argument('-main', '--main_path', type=str, requires=True)
+    parser.add_argument('-main', '--main_path', type=str, required=True)
     parser.add_argument('-misc', '--misc_path', type=str, default=None)
     parser.add_argument('-o', '--order', type=int, nargs="+")
     parser.add_argument('-out', '--out_path', type=str, default=None)
