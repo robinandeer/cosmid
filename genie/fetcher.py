@@ -9,6 +9,9 @@ from pybedtools import BedTool
 import subprocess
 import csv
 
+# Allow parsing of huge files
+csv.field_size_limit(1000000000)
+
 
 class Fetcher(object):
     """docstring for Fetcher"""
@@ -350,9 +353,6 @@ class Fetcher(object):
         gene coordinates from Biomart.
         """
 
-        # Allow parsing of huge files
-        csv.field_size_limit(1000000000)
-
         # Unless otherwise specified; overwrite the current file
         if not out_path:
             out_path = bed_path
@@ -369,3 +369,43 @@ class Fetcher(object):
         with open(out_path, "w") as handle:
 
             handle.write("\n".join(lines))
+
+    def reorganize(self, main_path, order, misc_path=None, out_path=None):
+        """
+        Helper method that lets you take one or two files (tab separated for starters)
+        and reorganize the columns of informations. If two files are used you will be
+        able to merge information from those files.
+
+        The requirements are that both files are the same length and are ordered the same way.
+        Sort the file before running the script if nessesary.
+
+        The order is 0-based. It also continues from the main file to the misc file.
+        If main has 3 columns and misc has 4 columns, the misc column IDs would be [3,4,5,6].
+        """
+
+        if not out_path:
+            out_path = main_path
+
+        lines = []
+
+        with open(main_path, "r") as main:
+            if misc_path:
+                with open(misc_path, "r") as misc:
+
+                    for main_row, misc_row in zip(csv.reader(main, dialect="excel-tab"), csv.reader(misc, dialect="excel-tab")):
+                        line = []
+                        for i in order:
+                            main_len = len(main_row)
+                            if i > main_len:
+                                line.append(misc_row[i-main_len])
+                            else:
+                                line.append(main_row[i])
+
+                        lines.append("\t".join(line))
+
+            else:
+                for row in csv.reader(main, dialect="excel-tab"):
+                    lines.append("\t".join([row[i] for i in order]))
+
+        with open(out_path, "w") as out:
+            out.write("\n".join(lines))
