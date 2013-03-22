@@ -8,9 +8,33 @@ from StringIO import StringIO
 from pybedtools import BedTool
 import subprocess
 import csv
+import time
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 # Allow parsing of huge files
 csv.field_size_limit(1000000000)
+
+
+class ChangeHandler(FileSystemEventHandler):
+    """
+    React to changes in files in the reference directory
+    """
+
+    def __init__(self, filename):
+
+        # This is the filename to look for changes to
+        self.filename = filename
+
+    def on_moved(self, event):
+        "If any file or folder is changed"
+
+        if event.dest_path.split("/")[-1] == self.filename:
+            raise FileReady
+
+
+class FileReady(Exception):
+    pass
 
 
 class Fetcher(object):
@@ -28,7 +52,9 @@ class Fetcher(object):
         return "/proj/" + self.project + "/private/wgs_wf_references/"
 
     def this_file_exists(self, path, required=False):
-        """Does a specified file exist?"""
+        """
+        Does a specified file exist?
+        """
 
         # For reference files that are needed to perform the requested convertion/calculations
         if required:
@@ -43,11 +69,34 @@ class Fetcher(object):
 
         # If the user wants to force overwrite, let her.
         if not self.force:
-            answer = os.path.exists(path)
+            return os.path.exists(path)
         else:
-            answer = False
+            return False
 
-        return answer
+    def file_being_downloaded(self, dir, filename, temp_path):
+
+        if not os.path.exists(temp_path):
+
+            # Use the custom event handler
+            event_handler = ChangeHandler(filename)
+            observer = Observer()
+            observer.schedule(event_handler, dir)
+
+            # Start the observer to look for creation of the file
+            observer.start()
+
+            try:
+                while True:
+                    time.sleep(1)
+            except FileReady:
+                # Raised when the file has been created (renamed from TEMP_*)
+                observer.stop()
+
+            observer.join()
+
+            return "ready"
+
+        return "proceed"
 
     def warn_error(self, ftp, e):
         """Warn the user in standardized way"""
@@ -102,6 +151,7 @@ class Fetcher(object):
             # Print welcome message
             print(ftp.getwelcome(), end="\n")
 
+            # If the user has requested the latest release we need to find out the accession
             if requested_assembly == "latest":
 
                 # Get the latest assembly version, GRCh37 is implied (until they release 38 ...)
@@ -112,6 +162,7 @@ class Fetcher(object):
                 # Update the requested assembly identifier
                 requested_assembly = "GRCh37.{0}".format(latest_ensembl_release)
 
+            # CMMS convention for naming FASTA files
             fasta_filename_base = "Homo_sapiens.{0}_nochr.fasta"
 
             fasta_filename = fasta_filename_base.format(requested_assembly)
@@ -121,6 +172,7 @@ class Fetcher(object):
                 print("{0} already exists.".format(fasta_filename), end="\n")
 
             else:
+
                 # The base URL to the FASTA files directory
                 base_path = "pub/{}/fasta/homo_sapiens/dna/"
 
@@ -139,9 +191,17 @@ class Fetcher(object):
 
                         break
 
-                # Request and get the reference genome file from the server, catch the response
-                ftp.retrbinary("RETR {0}{1}".format(path_to_fasta_files, fasta_name), open(self.base_ref_path + fasta_filename + ".gz", "wb").write)
-                self.unzip(fasta_filename + ".gz")
+                # Check and possibly wait for the file if it is being downloaded/processed
+                file_status = self.file_being_downloaded(self.base_ref_path, fasta_filename, fasta_filename + ".gz")
+
+                if file_status == "proceed":
+                    # Request and get the reference genome file from the server, catch the response
+                    ftp.retrbinary("RETR {0}{1}".format(path_to_fasta_files, fasta_name), open(self.base_ref_path + fasta_filename + ".gz", "wb").write)
+                    self.unzip(fasta_filename + ".gz")
+
+                elif file_status == "ready":
+                    # The file was already being downloaded, we waited and it is now ready to be used.
+                    pass
 
             ftp.close()
 
@@ -183,14 +243,28 @@ class Fetcher(object):
             # Write the file
             if self.this_file_exists(self.base_ref_path + savename):
                 print("{} already exists.".format(savename), end="\n")
+
             else:
 
                 if ccds_release == "latest":
                     # The relase is tied to NCBI version so I separate these to
                     # not have to check that number also
-                    ftp.retrbinary("RETR pub/CCDS/current_human/CCDS.current.txt", open(self.base_ref_path + savename, "wb").write)
+                    get_path = "RETR pub/CCDS/current_human/CCDS.current.txt"
                 else:
-                    ftp.retrbinary("RETR pub/CCDS/archive/" + ccds_release + "/CCDS.current.txt", open(self.base_ref_path + savename, "wb").write)
+                    get_path = "RETR pub/CCDS/archive/{}/CCDS.current.txt".format(ccds_release)
+
+                # Check and possibly wait for the file if it is being downloaded/processed
+                file_status = self.file_being_downloaded(self.base_ref_path, savename, "TEMP_" + savename)
+
+                if file_status == "proceed":
+                    ftp.retrbinary(get_path, open(self.base_ref_path + savename, "wb").write)
+
+                    # Rename the "TEMP_*" file to complete the transfer
+                    os.rename("{0}TEMP_{1}".format(self.base_ref_path, savename), self.base_ref_path + savename)
+
+                elif file_status == "ready":
+                    # The file was already being downloaded, we waited and it is now ready to be used.
+                    pass
 
                 print("{} downloaded successfully!".format(savename), end="\n")
 
@@ -241,15 +315,26 @@ class Fetcher(object):
                     filename_gz = filename + ".gz"
                 except KeyError:
                     print("Sorry but that short code ({}) wasn't recognized. Skipping.".format(code))
+                    continue
 
                 # Check if the file already exists
                 if self.this_file_exists(self.base_ref_path + filename):
                     print("{} already exists.".format(filename), end="\n")
                 else:
-                    print("Downloading {} ...".format(filename_gz), end="\n")
-                    ftp.retrbinary("RETR " + base_path + filename_gz, open(self.base_ref_path + filename_gz, "wb").write)
 
-                    self.unzip(filename_gz)
+                    # Check and possibly wait for the file if it is being downloaded/processed
+                    file_status = self.file_being_downloaded(self.base_ref_path, filename, filename_gz)
+
+                    if file_status == "proceed":
+
+                        print("Downloading {} ...".format(filename_gz), end="\n")
+                        ftp.retrbinary("RETR " + base_path + filename_gz, open(self.base_ref_path + filename_gz, "wb").write)
+
+                        self.unzip(filename_gz)
+
+                    elif file_status == "ready":
+                        # The file was already being downloaded, we waited and it is now ready to be used.
+                        continue
 
             ftp.close()
 
@@ -269,11 +354,21 @@ class Fetcher(object):
             if self.this_file_exists(self.base_ref_path + savename):
                 print("{} already exists.".format(savename), end="\n")
             else:
-                # Download the big FASTA file
-                print("Downloading {} ...".format(savename_gz), end="\n")
-                ftp.retrbinary("RETR goldenPath/" + assembly + "/bigZips/chromFa.tar.gz", open(self.base_ref_path + savename_gz, "wb").write)
 
-                self.unzip(savename_gz)
+                # Check and possibly wait for the file if it is being downloaded/processed
+                file_status = self.file_being_downloaded(self.base_ref_path, savename, savename_gz)
+
+                if file_status == "proceed":
+
+                    # Download the big FASTA file
+                    print("Downloading {} ...".format(savename_gz), end="\n")
+                    ftp.retrbinary("RETR goldenPath/{}/bigZips/chromFa.tar.gz".format(assembly), open(self.base_ref_path + savename_gz, "wb").write)
+
+                    self.unzip(savename_gz)
+
+                elif file_status == "ready":
+                    # The file was already being downloaded, we waited and it is now ready to be used.
+                    pass
 
             ftp.close()
 
@@ -294,6 +389,19 @@ class Fetcher(object):
             print("{} already exists".format(conversion_filename), end="\n")
 
         else:
+
+            # Check and possibly wait for the file if it is being downloaded/processed
+            file_status = self.file_being_downloaded(self.base_ref_path, conversion_filename, "TEMP_" + conversion_filename)
+
+            if file_status == "proceed":
+
+                # RENAME ALWAYS
+                pass
+
+            elif file_status == "ready":
+                # The file was already being downloaded, we waited and it is now ready to be used.
+                pass
+
             from_elements_bt = BedTool(from_path)
             to_elements_bt = BedTool(to_path)
 
