@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 import os
+import sys
 import ftplib
 from ftplib import FTP
 from StringIO import StringIO
@@ -480,17 +481,20 @@ class Fetcher(object):
 
     def reorganize(self, main_path, order, misc_path=None, out_path=None):
         """
-        Helper method that lets you take one or two files (tab separated for starters)
-        and reorganize the columns of informations. If two files are used you will be
-        able to merge information from those files.
+        Helper method that lets you take one or two files (tab separated
+        for starters) and reorganize the columns of informations. If two
+        files are used you will be able to merge information from those files.
 
-        The requirements are that both files are the same length and are ordered the same way.
-        Sort the file before running the script if nessesary.
+        The requirements are that both files are the same length and are
+        ordered the same way. Sort the file before running the script if
+        nessesary.
 
-        The order is 0-based. It also continues from the main file to the misc file.
-        If main has 3 columns and misc has 4 columns, the misc column IDs would be [3,4,5,6].
+        The order is 0-based. It also continues from the main file to the
+        misc file. If main has 3 columns and misc has 4 columns, the misc
+        column IDs would be [3,4,5,6].
 
-        It currently doesn't handle header comments that only appear in one file.
+        It currently doesn't handle header comments that only appear in
+        one file.
         """
 
         if not out_path:
@@ -499,10 +503,14 @@ class Fetcher(object):
         with open(main_path, "r") as main:
             if misc_path:
                 with open(misc_path, "r") as misc:
-                    lines = [self._addComplexLine(main_row, misc_row, order) for main_row, misc_row in zip(csv.reader(main, dialect="excel-tab"), csv.reader(misc, dialect="excel-tab"))]
+                    lines = [self._addComplexLine(main_row, misc_row, order)
+                             for main_row, misc_row in
+                             zip(csv.reader(main, dialect="excel-tab"),
+                                 csv.reader(misc, dialect="excel-tab"))]
 
             else:
-                lines = [self._addLine(row, order) for row in csv.reader(main, dialect="excel-tab")]
+                lines = [self._addLine(row, order)
+                         for row in csv.reader(main, dialect="excel-tab")]
 
         with open(out_path, "w") as out:
             out.write("\n".join(lines))
@@ -520,3 +528,81 @@ class Fetcher(object):
                 line.append(main_row[i])
 
         return "\t".join(line)
+
+    def join(self, mainPath, newPath, order, outPath,
+             idColumns=[0, 1, 2], sep="\t"):
+
+        elements = {}
+
+        # To be able to select the right column when picking values
+        mainColCount = 0
+        firstLine = True
+
+        with open(mainPath, "r") as handle:
+
+            for line in csv.reader(handle, delimiter=sep):
+
+                if firstLine:
+                    mainColCount = len(line)
+                    firstLine = False
+                    if line[0][0] == "#": continue
+
+                elementID = self._getID(line, idColumns)
+
+                if elementID not in elements:
+
+                    values = ["" for _ in range(len(order))]
+
+                    # Loop through all the columns with values to be saved
+                    for count, col in enumerate(order):
+                        # If the value is from the main file
+                        if col < mainColCount:
+                            values[count] = line[col]
+
+                    # Add all values with the ID as key
+                    elements[elementID] = values
+
+                else:
+                    sys.exit("The main file has non-unique IDs: {}"
+                             .format(elementID))
+
+        with open(newPath, "r") as handle:
+
+            firstLine = True
+
+            for line in csv.reader(handle, delimiter=sep):
+
+                if firstLine:
+                    firstLine = False
+                    if line[0][0] == "#": continue
+
+                elementID = self._getID(line, idColumns)
+
+                if elementID in elements:
+
+                    for count, col in enumerate(order):
+                        # If the value is from the new file
+                        if col >= mainColCount:
+                            elements[elementID][count] = line[col]
+
+                else:
+                    sys.stdout.write("Element not in the main file: {}\n"
+                                     .format(line))
+
+        with open(outPath, "w") as handle:
+
+            # Join all elements with given separator,
+            # then join lines with newline
+            handle.write("\n".join([sep.join(line)
+                                    for line in elements.itervalues()]))
+
+    def _getID(self, line, idColumns):
+        if isinstance(idColumns, (list, tuple)):
+
+            elementID = "|".join([line[col]
+                                  for col in idColumns])
+
+        else:
+            elementID = line[idColumns]
+
+        return elementID
