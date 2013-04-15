@@ -530,7 +530,7 @@ class Fetcher(object):
         return "\t".join(line)
 
     def join(self, mainPath, newPath, order, outPath,
-             idColumns=[0, 1, 2], sep="\t"):
+             idColumns=[0, 1, 2], sep="\t", default=""):
 
         elements = {}
 
@@ -551,7 +551,7 @@ class Fetcher(object):
 
                 if elementID not in elements:
 
-                    values = ["" for _ in range(len(order))]
+                    values = [default for _ in range(len(order))]
 
                     # Loop through all the columns with values to be saved
                     for count, col in enumerate(order):

@@ -11,7 +11,8 @@ def main(args):
 
     if args.join:
         fetcher.join(args.main_path, args.misc_path, args.order, args.out_path,
-                     idColumns=args.id_columns, sep=args.separator)
+                     idColumns=args.id_columns, sep=args.separator,
+                     default=args.default)
     else:
         fetcher.reorganize(args.main_path, args.order,
                            misc_path=args.misc_path, out_path=args.out_path)
@@ -27,6 +28,7 @@ if __name__ == "__main__":
     parser.add_argument('-id', '--id_columns', type=str, nargs="+",
                         default=[0, 1, 2])
     parser.add_argument('-sep', '--separator', type=str, default="\t")
+    parser.add_argument('-def', '--default', default="")
 
     parser.add_argument("-j", --"join", action="store_true", default=False)
 
