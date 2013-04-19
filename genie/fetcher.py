@@ -551,7 +551,7 @@ class Fetcher(object):
 
                 if elementID not in elements:
 
-                    values = [default for _ in range(len(order))]
+                    values = [str(default) for _ in range(len(order))]
 
                     # Loop through all the columns with values to be saved
                     for count, col in enumerate(order):
@@ -569,7 +569,6 @@ class Fetcher(object):
         with open(newPath, "r") as handle:
 
             firstLine = True
-
             for line in csv.reader(handle, delimiter=sep):
 
                 if firstLine:
@@ -583,7 +582,8 @@ class Fetcher(object):
                     for count, col in enumerate(order):
                         # If the value is from the new file
                         if col >= mainColCount:
-                            elements[elementID][count] = line[col]
+                            elements[elementID][count] = line[col -
+                                                              mainColCount]
 
                 else:
                     sys.stdout.write("Element not in the main file: {}\n"
@@ -595,6 +595,11 @@ class Fetcher(object):
             # then join lines with newline
             handle.write("\n".join([sep.join(line)
                                     for line in elements.itervalues()]))
+
+        with open(outPath, "a") as handle:
+
+            # Add an empty last line
+            handle.write("\n")
 
     def _getID(self, line, idColumns):
         if isinstance(idColumns, (list, tuple)):

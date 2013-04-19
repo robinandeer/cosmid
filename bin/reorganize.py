@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument('-sep', '--separator', type=str, default="\t")
     parser.add_argument('-def', '--default', default="")
 
-    parser.add_argument("-j", --"join", action="store_true", default=False)
+    parser.add_argument("-j", "--join", action="store_true", default=False)
 
     args = parser.parse_args()
     main(args)
