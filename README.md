@@ -1,6 +1,4 @@
-<div style="width: 600px; margin: 0 auto;">
-	<img src="https://raw.github.com/robinandeer/Genie/master/assets/genie-logo.png" width="600" height="400" alt="Genie: Genomics database updater">
-</div>
+[Genie Avatar](https://raw.github.com/robinandeer/Genie/develop/assets/genie_logo.png)
 
 ## Genie: A Genomics Database Updater
 The main script is callabe from the terminal and the user requests which files to be checked and potentially updated/download.
