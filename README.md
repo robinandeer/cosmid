@@ -1,4 +1,4 @@
-[Genie Avatar](https://raw.github.com/robinandeer/Genie/develop/assets/genie_logo.png)
+![Genie Avatar](https://raw.github.com/robinandeer/Genie/develop/assets/genie_logo.png)
 
 ## Genie: A Genomics Database Updater
 The main script is callabe from the terminal and the user requests which files to be checked and potentially updated/download.
