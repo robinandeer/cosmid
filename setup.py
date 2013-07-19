@@ -4,18 +4,18 @@ except ImportError:
     from distutils.core import setup
 
 config = {
-    'description': 'An automatic genomics database updater.',
+    'description': 'An automated genomics database updater.',
     'author': 'Robin Andeer',
     'url': 'https://github.com/robinandeer/Genie.',
     'download_url': 'https://github.com/robinandeer/Genie/archive/master.zip',
     'author_email': 'robin.andeer@scilifelab.se',
-    'version': '0.3.8',
-    'install_requires': ['nose'],
-    'packages': ['genie'],
-    'scripts': [
-        'bin/update_databases.py',
-        'bin/reorganize.py'
+    'version': '0.2.0',
+    'install_requires': [
+        "nose",
+        "ftputil"
     ],
+    'packages': ['genie'],
+    'scripts': [],
     'name': 'Genie'
 }
 
