@@ -5,9 +5,6 @@ import os
 import ftputil
 import fnmatch
 import shutil
-import collections
-from watchdog.Oobservers import Observer
-from watchdog.events import FileSystemEventHandler, FileMovedEvent
 
 
 class File(object):
@@ -27,20 +24,6 @@ class File(object):
     return "    URL:   {url}\nPattern:   {ptrn}".format(url=self.url, ptrn=self.pattern)
 
 
-class MovedHandler(FileSystemEventHandler):
-  """
-  React to changes in Python and Rest files by
-  running unit tests (Python) or building docs (.rst)
-  """
-
-  def __init__(self, path):
-    self.path = path
-
-  def on_moved(self, event, type=FileMovedEvent):
-    if os.path.abspath(event.src_path) == os.path.abspath(self.path):
-      return self.path
-
-
 class FTP(object):
   """
   FTP: base class for FTP server. Wraps high level FTPHost. Will not unzip files
@@ -56,17 +39,27 @@ class FTP(object):
   def __init__(self, server, username, password, force=False):
     super(FTP, self).__init__()
 
+    # Inheriting from the class doesn't seem to work - wrapping
     self.ftp = ftputil.FTPHost(server, username, password)
-    self._progress = 0
 
     self.file = None
     self.version = "latest"  # Default
     self.saveName = None
+
     # Default directory to save to is the current one
     self.saveDir = "./"
+
+    # Force overwriting existing target files
     self._force = force
 
   def force(self, option=None):
+    """
+    Public: Decides if existing files will be overwritten without no questions
+    asked.
+
+    option [bool] - Assert: files should be overwritten.
+    =============
+    """
     self._force = option or True
 
     return self
@@ -157,7 +150,7 @@ class FTP(object):
     except shutil.Error, e:
       raise e
 
-  def commit(self):
+  def commit(self, dry=False):
     """
     Public: Saves a file from the server to the computer.
     =============
@@ -185,10 +178,16 @@ class FTP(object):
       if not self._exists():
         # Initiate download of the file
         path = "{path}/{file}".format(path=self.file.url, file=fileNames[0])
-        self.ftp.download(path, self.tempPath(), mode)
 
-        # Rename the file to the final file name
-        self.move(self.tempPath(), self.savePath)
+        if not dry:
+          self.ftp.download(path, self.tempPath(), mode)
+
+          # Rename the file to the final file name
+          self.move(self.tempPath(), self.savePath)
+
+        else:
+          return {"fileNames": fileNames, "savePath": self.savePath,
+                  "tempPath": self.tempPath(), "mode": mode}
 
     else:
       # NOT OK (for now)
@@ -242,7 +241,7 @@ class GATK(FTP):
 
     if version is None:
       # Figure out which is the latest version folder
-      folders = [float(folder) for folder in self.listdir("bundle/")]
+      folders = [float(folder) for folder in self.ftp.listdir("bundle/")]
       version = max(folders)
 
     url = "bundle/{dist}/{assembly}".format(dist=folder, assembly=assembly)
@@ -265,14 +264,3 @@ class UCSC(FTP):
       "assembly": File("goldenPath/currentGenomes/Homo_sapiens/bigZips/",
                        "chromFa.tar.gz")
     }
-
-
-# def babysitter(path):
-#   if not os.path.isfile(path):
-#     pass
-
-#   try:
-#     # Move/renmae the file when ready
-#     shutil.move(tempPath, outPath)
-#   except shutil.Error, e:
-#     raise e

@@ -20,6 +20,9 @@ to write your very own ftp hooks to expand functionality.
 
 ## Documentation
 
+### Python API
+Todo...
+
 ### CLI
 
 Usage: `genie.py [-f] [-s server] [-q query] [-d destination] [-n file_name]`
