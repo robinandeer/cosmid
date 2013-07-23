@@ -24,13 +24,13 @@ to write your very own ftp hooks to expand functionality.
 
 Usage: `genie.py [-f] [-s server] [-q query] [-d destination] [-n file_name]`
 
-| Option            | Explanation                                |
-| ----------------- | ------------------------------------------ |
-| **-s, --server**  | The name of the server; NCBI, Ensembl etc. |
-| **-q, --query**   | The keyword for the file file to download  |
-| -d, --destination | The destination folder to store downloaded file in.   |
-| -n, --file_name   | What to name the downloaded file           |
-| -f, --force       | Enable overwrite mode.                     |
+| Option                | Explanation                                 |
+| --------------------- | ------------------------------------------- |
+| `-s`, `--server`      | The name of the server; NCBI, Ensembl etc.  |
+| `-q`, `--query`       | The keyword for the file file to download.  |
+| `-d`, `--destination` | The destination folder to store downloaded file in. |
+| `-n`, `--file_name`   | What to name the downloaded file.           |
+| `-f`, `--force`       | Enable overwrite mode.                      |
 
 Example:
 ```bash
