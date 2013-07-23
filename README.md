@@ -1,4 +1,4 @@
-![Genie Avatar](https://raw.github.com/robinandeer/Genie/develop/assets/genie_logo.png)
+![Genie Avatar](assets/genie_logo.png)
 
 ## Genie: A Genomics Database Downloader
 Genie simplifies connecting to and downloading various genomics resources from
