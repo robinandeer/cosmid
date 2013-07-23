@@ -12,10 +12,11 @@ config = {
     'version': '0.2.0',
     'install_requires': [
         "nose",
-        "ftputil"
+        "ftputil",
+        "watchdog"
     ],
     'packages': ['genie'],
-    'scripts': [],
+    'scripts': ["scripts/genie.py"],
     'name': 'Genie'
 }
 

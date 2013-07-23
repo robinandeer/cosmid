@@ -1,5 +1,5 @@
 from nose.tools import *
-from genie.database import Ensembl, NCBI, GATK, UCSC
+from genie.servers import Ensembl, NCBI, GATK, UCSC
 import fnmatch
 
 
