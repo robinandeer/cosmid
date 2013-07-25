@@ -13,7 +13,8 @@ config = {
     'install_requires': [
         "nose",
         "ftputil",
-        "watchdog"
+        "sh",
+        "roadblock"
     ],
     'packages': ['genie'],
     'scripts': ["scripts/genie.py"],

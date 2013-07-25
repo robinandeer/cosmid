@@ -5,6 +5,7 @@ import os
 import ftputil
 import fnmatch
 import shutil
+import sh
 
 
 class File(object):
@@ -15,13 +16,15 @@ class File(object):
   url     [str] - Path to directory of the file
   pattern [str] - Unique pattern to select file in directory
   """
-  def __init__(self, url, pattern=""):
+  def __init__(self, url, pattern="", count=1):
     super(File, self).__init__()
     self.url = url
     self.pattern = pattern
+    self.count = count
 
   def __str__(self):
-    return "    URL:   {url}\nPattern:   {ptrn}".format(url=self.url, ptrn=self.pattern)
+    return "    URL:   {url}\nPattern:   {ptrn}"\
+           .format(url=self.url, ptrn=self.pattern)
 
 
 class FTP(object):
@@ -52,6 +55,9 @@ class FTP(object):
     # Force overwriting existing target files
     self._force = force
 
+    # Defaults to unzip gzipped files
+    self.userWantsToUnzip = True
+
   def force(self, option=None):
     """
     Public: Decides if existing files will be overwritten without no questions
@@ -75,7 +81,7 @@ class FTP(object):
       self.file = self.files[file_id]
 
     else:
-      print("Sorry, I don't know about that file: {}".format(file_id))
+      print("Sorry, I'm not aware of that file: {}".format(file_id))
 
     return self
 
@@ -91,34 +97,38 @@ class FTP(object):
 
   def to(self, path):
     """
-    Public: Sets the path to the save directory path.
+    Public: Sets the path where the file will be saved.
     =============
 
-    path [str] - The path to the directory to save to
+    path [str] - The path to the save location
     """
 
-    # Remove trailing /
-    if path.endswith("/"):
-      path = path[:-1]
+    # Extract the file name the will be save to
+    fileName = os.path.basename()
 
-    self.saveDir = path
+    # If the user provided a file name, use that
+    # => otherwise name the downloaded file the same as on the remote server
+    if fileName != "":
+
+      if fileName.endswith(".gz"):
+        self.userWantsToUnzip = False
+        # Remove the .gz file ending
+        fileName = fileName[:-3]
+
+      self.saveName = fileName
+
+    # Extract the path to the save directory
+    dirPath = os.path.dirname()
+    if os.path.isdir(dirPath):
+      self.saveDir = dirPath
+    else:
+      print("You don't fool me. This path doesn't exist: {}".format(dirPath))
 
     return self
 
-  def named(self, fileName):
-    """
-    Public: Optionally sets file name to save to.
-    =============
-
-    fileName [str] - The file name to save the downloaded file as
-    """
-    self.saveName = fileName
-
-    return self
-
-  @property
-  def savePath(self):
-    return "{path}/{file}".format(path=self.saveDir, file=self.saveName)
+  def savePath(self, ext=""):
+    return "{path}/{file}{ext}".format(path=self.saveDir, file=self.saveName,
+                                       ext=ext)
 
   def tempPath(self, ext=""):
     return "{path}/__temp.{file}{ext}".format(path=self.saveDir,
@@ -141,7 +151,7 @@ class FTP(object):
       # Check if temp file is downloading "{folder}/__temp.{file}"
       # If so: start watching for file changes and wait until that file is
       # downloaded.
-      return os.path.isfile(self.savePath)
+      return os.path.isfile(self.savePath())
 
   def move(self, source, dest):
     try:
@@ -157,37 +167,46 @@ class FTP(object):
 
     returns [int] - 0: OK, >0: NOT OK
     """
-    # Now we have enough to contact the server and fetch path(s) to download
+    # Now we have enough to contact the server and fetch file names to download
     fileNames = self._findInList(self.ftp.listdir(self.file.url),
                                                   self.file.pattern)
 
-    if len(fileNames) == 1:
+    if len(fileNames) == self.file.count:
 
-      # Set a save as name unless already set
+      # Set a save name unless already set
       if self.saveName is None:
         # Use the same name as on server
-        self.named(fileNames[0])
+        self.to("{path}/{file}".format(path=self.saveDir, file=fileNames[0]))
 
-      # Is the file gzipped? (Binary format)
-      if self.saveName.endswith(".gz"):
+      # Is the remote file gzipped? (Binary format)
+      if fileNames[0].endswith(".gz"):
         mode = "b"
+        ext = ".gz"
       else:
+        # Default mode is to download non-binary files
         mode = "a"
+        ext = ""
 
       # Avoid overwriting files (unless "force")
       if not self._exists():
-        # Initiate download of the file
         path = "{path}/{file}".format(path=self.file.url, file=fileNames[0])
 
         if not dry:
-          self.ftp.download(path, self.tempPath(), mode)
+          # Initiate download of the file
+          self.ftp.download(path, self.tempPath(ext), mode)
 
-          # Rename the file to the final file name
-          self.move(self.tempPath(), self.savePath)
+          if mode == "b" and self.userWantsToUnzip:
+            # Unzip and remove archive
+            sh.gunzip(self.tempPath(".gz"))
+            # Now the file ending ".gz" has been removed
+            ext = ""
+
+          # Rename the file to the final file name (removing leading "__temp.")
+          self.move(self.tempPath(ext), self.savePath(ext))
 
         else:
-          return {"fileNames": fileNames, "savePath": self.savePath,
-                  "tempPath": self.tempPath(), "mode": mode}
+          return {"fileNames": fileNames, "savePath": self.savePath(ext),
+                  "tempPath": self.tempPath(ext), "mode": mode}
 
     else:
       # NOT OK (for now)
@@ -223,11 +242,11 @@ class NCBI(FTP):
       # Genbank assembly in FASTA format
       "genbank": File("genbank/genomes/Eukaryotes/vertebrates_mammals/"
                       "Homo_sapiens/GRCh37.p13/Primary_Assembly/"
-                      "assembled_chromosomes/FASTA/", "*.fa.gz"),
+                      "assembled_chromosomes/FASTA/", "*.fa.gz", 24),
 
-      # All the assembeled chromosomes
+      # All the assembeled chromosomes (+ MT)
       "assembly": File("genomes/Homo_sapiens/Assembled_chromosomes/seq/",
-                       "hs_ref_*_chr*.fa.gz"),
+                       "hs_ref_*_chr*.fa.gz", 25),
 
       # CCDS, manually curated database of transcript annotations
       "ccds": File("pub/CCDS/current_human", "CCDS.current.txt") 
