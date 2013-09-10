@@ -11,22 +11,22 @@ class Test_Ensembl(object):
     self.ftp = Ensembl()
 
   def test_get_assembly(self):
-    result = self.ftp.save("assembly").to("./data/").named("assembly.fa.gz")\
+    result = self.ftp.save("assembly").to(".tmp/assembly.fa.gz")\
                      .commit(dry=True)
 
     # Check that we found the expected file on the server
     assert_equal(result["fileNames"],
-                 ["Homo_sapiens.GRCh37.72.dna.primary_assembly.fa.gz"])
+                 ["Homo_sapiens.GRCh37.73.dna.primary_assembly.fa.gz"])
 
     # Gzipped files are binary, check mode
     assert_equal(result["mode"], "b")
 
   def test_get_gtf(self):
-    result = self.ftp.save("gtf").to("./data/").named("Homo_sapiens.gtf.gz")\
+    result = self.ftp.save("gtf").to(".tmp/Homo_sapiens.gtf.gz")\
                      .commit(dry=True)
 
     # Check that we found the expected file on the server
-    assert_equal(result["fileNames"], ["Homo_sapiens.GRCh37.72.gtf.gz"])
+    assert_equal(result["fileNames"], ["Homo_sapiens.GRCh37.73.gtf.gz"])
 
 class Test_NCBI(object):
   """docstring for Test_NCBI"""
@@ -58,8 +58,7 @@ class Test_NCBI(object):
   #     assert_true(fnmatch.fnmatch(item, "hs_ref_GRCh37.p10_*.fa.gz"))
 
   def test_get_ccds(self):
-    result = self.ftp.save("ccds").to("./data/").named("CCDS.txt")\
-                     .commit(dry=True)
+    result = self.ftp.save("ccds").to(".tmp/CCDS.txt").commit(dry=True)
 
     assert_equal(result["fileNames"], ["CCDS.current.txt"])
     assert_equal(result["mode"], "a")
