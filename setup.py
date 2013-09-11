@@ -1,3 +1,5 @@
+import genie
+
 try:
     from setuptools import setup
 except ImportError:
@@ -9,13 +11,18 @@ config = {
     'url': 'https://github.com/robinandeer/Genie.',
     'download_url': 'https://github.com/robinandeer/Genie/archive/master.zip',
     'author_email': 'robin.andeer@scilifelab.se',
-    'version': '0.2.0',
+    'version': genie.__version__,
     'install_requires': [
         "nose",
-        "ftputil"
+        "ftputil",
+        "sh",
+        "watchdog",
+        "roadblock",
+        "docopt",
+        "path.py"
     ],
     'packages': ['genie'],
-    'scripts': [],
+    'scripts': ["scripts/genie.py"],
     'name': 'Genie'
 }
 

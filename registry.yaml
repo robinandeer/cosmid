@@ -1,0 +1,40 @@
+ensemble_assembly:
+  server: Ensembl
+  dirPath: pub/current_fasta/homo_sapiens/dna
+  pattern: "*.dna.primary_assembly.fa.gz"
+  dbName: Ensembl.Homo_sapiens.fa.gz
+
+gtf:
+  server: Ensembl
+  dirPath: pub/current_gtf/homo_sapiens
+  pattern: "*gtf.gz"
+  dbName: Ensembl.Homo_sapiens.gtf.gz
+
+ccds:
+  server: NCBI
+  versions: [Hs103, Hs104, Hs35.1, Hs36.2, Hs36.3, Hs37.1, Hs37.2, Hs37.3, MGSCv37.2, Mm103, Mm36.1, Mm37.1, Mm38.1]
+  dirPath: pub/CCDS/current_human
+  pattern: CCDS.current.txt
+  dbName: CCDS.txt
+
+genbank:
+  server: NCBI
+  versions: [GRCh37, GRCh37.p12, GRCh37.p13]
+  files: 24
+  dirPath: genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37.p13/Primary_Assembly/assembled_chromosomes/FASTA/
+  pattern: "*.fa.gz"
+  dbName: Genbank.Homo_sapiens.fa.gz
+
+ncbi_assembly:
+  server: NCBI
+  versions: [BUILD.37.2, BUILD.37.3]
+  files: 25
+  dirPath: genomes/Homo_sapiens/Assembled_chromosomes/seq/
+  pattern: "hs_ref_*_chr*.fa.gz"
+  dbName: NCBI.Homo_sapiens.fa.gz
+
+ucsc_assembly:
+  server: UCSC
+  dirPath: goldenPath/currentGenomes/Homo_sapiens/bigZips
+  pattern: chromFa.tar.gz
+  dbName: UCSC.Homo_sapiens.fa.gz

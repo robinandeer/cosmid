@@ -1,14 +1,44 @@
-![Genie Avatar](https://raw.github.com/robinandeer/Genie/develop/assets/genie_logo.png)
+![Genie Avatar](assets/genie_logo.png)
 
-## Genie: A Genomics Database Updater
-The main script is callabe from the terminal and the user requests which files
-to be checked and potentially updated/download.
+## Genie: A Genomics Database Downloader
+Genie simplifies connecting to and downloading various genomics resources from
+around the web.
 
+Currently supported FTP servers include:
+* Ensembl
+* NCBI
+* GATK
+* UCSC
+
+To integrate the package into your existing pipe line you should take a look at
+the CLI.
+
+## More details
 The idea is not to provide a completely generalized solution since the different
 servers provide very different folder structures. Instead it will be incouraged
 to write your very own ftp hooks to expand functionality.
 
 ## Documentation
+
+### Python API
+Todo...
+
+### CLI
+
+Usage: `genie.py [-f] [-s server] [-q query] [-d destination] [-n file_name]`
+
+| Option                | Explanation                                 |
+| --------------------- | ------------------------------------------- |
+| `-s`, `--server`      | The name of the server; NCBI, Ensembl etc.  |
+| `-q`, `--query`       | The keyword for the file file to download.  |
+| `-d`, `--destination` | The destination folder to store downloaded file in. |
+| `-n`, `--file_name`   | What to name the downloaded file.           |
+| `-f`, `--force`       | Enable overwrite mode.                      |
+
+Example:
+```bash
+  python genie.py -s Ensembl -q gtf -d ~/Desktop -n Homo_sapiens.gtf.gz
+```
 
 **User information**
 For anonymous FTP access, the servers will often accept your email adress as
@@ -20,14 +50,7 @@ either username or password. This is a *required* option.
 
 **Ensembl**
 The only supported file from Ensembl is the reference genome sequence in FASTA
-format. The extra option lets you set a specific assembly in the format
-"GRCh[number].[version]". The default is for the latest assembly to be fetched.
-If you are using for example `BEDTools` it's worth noting that the chromosome
-IDs are prepended with "chr".
-
-```bash
-	python update_databases.py -e -ea "GRCh37.65"
-```
+format. Chromosome IDs are prepended with "chr".
 
 **NCBI (CCDS)**
 The only supported file from the NCBI servers is the fantastic and
@@ -39,20 +62,12 @@ numbering system based on the NCBI release ID following the format
 the Ensembl genome assembly that the database is based on: e.g. "GRCh37.69".
 The default is to fetch the latest release of the database.
 
-```bash
-	python update_databases.py -c -cr "Hs37.2"
-```
-
 **UCSC**
 The second source for getting the reference human genome sequence in FASTA
 format. The main difference seems to be in the mitochondrial DNA sequence and
 the fact that, compared to Ensemble, UCSC doesn't prepend "chr" to the
 chromosome IDs. The assembly option is not as detailed as for Ensembl and of the
 format "hg[assembly number]".
-
-```bash
-	python update_databases.py -u -ua "hg19"
-```
 
 **GATK**
 GATK provides a number of valuable files that they recommend be used as input
@@ -71,20 +86,12 @@ assembly "GRCh37/hg19" to use. The default is either the latest and the "hg19"
 genome assembly. Really the only options for assembly is "hg18-19" and
 "GRCh36-37" (no versions).
 
-```bash
-	python update_databases.py -g -gv 2.2 -ga "GRCh37" -gf mills hapmap dbsnp
-```
-
-**Force update**
+**Force**
 It can sometimes be handy to force overwriting existing files when scripts
 behave irrationally. By providing the option "-f" the script will not worry
 about what files are already in your reference directory and simply overwrite
 any files you specify for download. At this point it's not possible to gain
 more fine grain control of which files should be forced to download.
-
-```bash
-	python update_databases.py -f
-```
 
 **Future updates**
 * Because of the sequential nature of the script, updating multiple databases at

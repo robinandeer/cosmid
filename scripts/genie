@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+
+"""Genie CLI
+
+Usage:
+  genie download [--wait=<sec>] [--forced] [--dry]
+  genie download <db_key> [--wait=<sec>] [--forced] [--save] [--dry]
+  genie (-h | --help)
+  genie --version
+
+Options:
+  -h --help          Show this screen.
+  --version          Show version.
+  -f --force         Overwrite existing files
+  -w --wait=<sec>    How long to wait if the download is already started
+"""
+from __future__ import print_function
+from docopt import docopt
+import yaml
+from path import path
+import os
+import sys
+geniePath = os.path.abspath("../Genie")
+sys.path.insert(0, geniePath)
+import genie
+from genie.core import DB, File, FTP
+
+
+def main(args):
+
+    # Load in the servers
+    # TODO: How can this file be distributed?
+    with open("servers.yaml", "r") as handle:
+      servers = yaml.load(handle.read())
+
+    # Load in the registry: this is used to crosscheck db_key with server
+    # TODO: Perhaps crosscheck version of database with option?
+    with open("registry.yaml", "r") as handle:
+      registry = yaml.load(handle.read())
+
+    # Load possible `.genierc` file with options
+    if path(".genierc").exists():
+      with open(".genierc", "r") as handle:
+        config = yaml.load(handle.read())
+
+    else:
+      config = {}
+
+    # Extract the values if there are any (else set default)
+    dest = path(config.get("dest", "databases"))
+    maxWait = args.get("--wait", config.get("maxWait", 0))
+
+    # Create a new destination folder if needed
+    if not dest.exists():
+      if dest.isfile():
+        sys.exit("Your save directory ({}) has to be a valid folder!"
+                 .format(dest))
+      else:
+        # Iniate a new directory
+        dest.mkdir()
+
+    if not args["<db_key>"]:
+      # Open the local genie.yaml file and download all included databases
+      if path("genie.yaml").exists():
+        with open("genie.yaml", "r") as handle:
+          data = yaml.load(handle.read())
+
+        # Loop over each database reference
+        # This only supports download the latest version for now
+        dbs = [db_key for db_key in data]
+
+      else:
+        sys.exit("No 'genie.yaml' detected; run 'genie init'")
+
+    else:
+      # TODO: Enable multiple downloads from commandline
+      # TODO: Overwrite YAML file to include new databases if "--save"
+      dbs = [args["<db_key>"]]
+
+    # TODO: Multithreading/processing
+    for db_key in dbs:
+      # Setup DB object from the registry
+      db = DB(**registry[db_key])
+
+      # Check if the file already exists
+      if (dest + "/" + db.dbName).exists():
+        # Move to next file
+        continue
+
+      server = servers.get(db.server.lower())
+      url = server["url"]
+      username = server["username"]
+      # Get email from config or set password to empty string
+      password = config.get(server["password"], "")
+
+      # Initiate FTP server connection
+      ftp = FTP(url, username, password)
+
+      for f in ftp.listFiles(db.dirPath, db.pattern):
+        # Set what file to download and whether to force overwrites
+        fullPath = "{dir}/{file}".format(dir=db.dirPath, file=f)
+
+        if args["--dry"]:
+          print("Not downloading: {0} to {1}"
+                .format(fullPath, "{0}/{1}".format(dest, db.dbName)))
+
+        else:
+          print("Downloading: {}".format("{0}/{1}".format(dest, db.dbName)))
+          fileSize = ftp.fileSize(fullPath)
+          print("Size: {} MB".format(fileSize))
+          ftp.commit(fullPath, "{0}/{1}".format(dest, db.dbName))
+
+    print("All databases downloaded to: '{}'".format(dest))
+
+
+if __name__ == "__main__":
+    args = docopt(__doc__, version="Genie {v}".format(v=genie.__version__))
+    main(args)
+
+# # Bash
+# for chrm in "chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18" "chr19" "chr20" "chr21" "chr22" "chrX" "chrY"
+# do
+#   gzip -d "$chrm.fa.gz"
+# done
+
+# cat chr*.fa > Homo_sapiens.GRCh37.dna.concat.fa
