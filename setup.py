@@ -18,7 +18,8 @@ config = {
         "sh",
         "watchdog",
         "roadblock",
-        "docopt"
+        "docopt",
+        "path.py"
     ],
     'packages': ['genie'],
     'scripts': ["scripts/genie.py"],
