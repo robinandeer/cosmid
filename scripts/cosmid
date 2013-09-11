@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-"""Genie CLI
+"""cosmid CLI
 
 Usage:
-  genie download [--wait=<sec>] [--forced] [--dry]
-  genie download <db_key> [--wait=<sec>] [--forced] [--save] [--dry]
-  genie (-h | --help)
-  genie --version
+  cosmid download [--wait=<sec>] [--forced] [--dry]
+  cosmid download <db_key> [--wait=<sec>] [--forced] [--save] [--dry]
+  cosmid (-h | --help)
+  cosmid --version
 
 Options:
   -h --help          Show this screen.
@@ -20,10 +20,10 @@ import yaml
 from path import path
 import os
 import sys
-geniePath = os.path.abspath("../Genie")
-sys.path.insert(0, geniePath)
-import genie
-from genie.core import DB, File, FTP
+cosmidPath = os.path.abspath("../cosmid")
+sys.path.insert(0, cosmidPath)
+import cosmid
+from cosmid.core import DB, File, FTP
 
 
 def main(args):
@@ -38,9 +38,9 @@ def main(args):
     with open("registry.yaml", "r") as handle:
       registry = yaml.load(handle.read())
 
-    # Load possible `.genierc` file with options
-    if path(".genierc").exists():
-      with open(".genierc", "r") as handle:
+    # Load possible `.cosmidrc` file with options
+    if path(".cosmidrc").exists():
+      with open(".cosmidrc", "r") as handle:
         config = yaml.load(handle.read())
 
     else:
@@ -60,9 +60,9 @@ def main(args):
         dest.mkdir()
 
     if not args["<db_key>"]:
-      # Open the local genie.yaml file and download all included databases
-      if path("genie.yaml").exists():
-        with open("genie.yaml", "r") as handle:
+      # Open the local cosmid.yaml file and download all included databases
+      if path("cosmid.yaml").exists():
+        with open("cosmid.yaml", "r") as handle:
           data = yaml.load(handle.read())
 
         # Loop over each database reference
@@ -70,7 +70,7 @@ def main(args):
         dbs = [db_key for db_key in data]
 
       else:
-        sys.exit("No 'genie.yaml' detected; run 'genie init'")
+        sys.exit("No 'cosmid.yaml' detected; run 'cosmid init'")
 
     else:
       # TODO: Enable multiple downloads from commandline
@@ -114,7 +114,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = docopt(__doc__, version="Genie {v}".format(v=genie.__version__))
+    args = docopt(__doc__, version="cosmid {v}".format(v=cosmid.__version__))
     main(args)
 
 # # Bash

@@ -1,4 +1,4 @@
-import genie
+import cosmid
 
 try:
     from setuptools import setup
@@ -6,24 +6,21 @@ except ImportError:
     from distutils.core import setup
 
 config = {
-    'description': 'An automated genomics database updater.',
+    'name': 'cosmid'
+    'description': 'A database manager for genomics',
     'author': 'Robin Andeer',
-    'url': 'https://github.com/robinandeer/Genie.',
-    'download_url': 'https://github.com/robinandeer/Genie/archive/master.zip',
+    'url': 'https://github.com/robinandeer/cosmid',
+    'download_url': 'https://github.com/robinandeer/cosmid/archive/master.zip',
     'author_email': 'robin.andeer@scilifelab.se',
-    'version': genie.__version__,
+    'version': cosmid.__version__,
     'install_requires': [
         "nose",
         "ftputil",
-        "sh",
-        "watchdog",
-        "roadblock",
         "docopt",
         "path.py"
     ],
-    'packages': ['genie'],
-    'scripts': ["scripts/genie.py"],
-    'name': 'Genie'
+    'packages': ['cosmid'],
+    'scripts': ["scripts/cosmid"]
 }
 
 setup(**config)
