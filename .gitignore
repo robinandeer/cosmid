@@ -72,3 +72,7 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Project specific
+.cosmidrc
+databases
