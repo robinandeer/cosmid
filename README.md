@@ -1,6 +1,5 @@
 ![cosmid logo](assets/cosmid-logo.png)
 
-## cosmid: A database manager for genomics
 Think [bower](http://bower.io/) but for managing and downloading genomics resources; assemblies, databases etc.
 
 Currently supported FTP servers include:
@@ -8,3 +7,6 @@ Currently supported FTP servers include:
 * NCBI
 * GATK
 * UCSC
+
+### Why cosmid?
+Cosmids are often used as cloning vectors. `cosmid` let's you "clone" various databases for use in your own projects.

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-"""cosmid CLI
+"""Cosmid CLI
 
 Usage:
-  cosmid download [--wait=<sec>] [--forced] [--dry]
-  cosmid download <db_key> [--wait=<sec>] [--forced] [--save] [--dry]
+  cosmid clone [--wait=<sec>] [--forced] [--dry]
+  cosmid clone <db_key> [--wait=<sec>] [--forced] [--save] [--dry]
   cosmid (-h | --help)
   cosmid --version
 
@@ -24,20 +24,12 @@ cosmidPath = os.path.abspath("../cosmid")
 sys.path.insert(0, cosmidPath)
 import cosmid
 from cosmid.core import DB, File, FTP
+from cosmid.magicmethods import cd
 
 
 def main(args):
 
-    # Load in the servers
-    # TODO: How can this file be distributed?
-    with open("servers.yaml", "r") as handle:
-      servers = yaml.load(handle.read())
-
-    # Load in the registry: this is used to crosscheck db_key with server
-    # TODO: Perhaps crosscheck version of database with option?
-    with open("registry.yaml", "r") as handle:
-      registry = yaml.load(handle.read())
-
+    # First issue is to look for local ".cosmidrc"
     # Load possible `.cosmidrc` file with options
     if path(".cosmidrc").exists():
       with open(".cosmidrc", "r") as handle:
@@ -46,71 +38,98 @@ def main(args):
     else:
       config = {}
 
-    # Extract the values if there are any (else set default)
-    dest = path(config.get("dest", "databases"))
-    maxWait = args.get("--wait", config.get("maxWait", 0))
+    # Change current working dir if specified, otherwise stick to the current
+    # by default.
+    with cd(config.get("cwd", ".")):
 
-    # Create a new destination folder if needed
-    if not dest.exists():
-      if dest.isfile():
-        sys.exit("Your save directory ({}) has to be a valid folder!"
-                 .format(dest))
-      else:
-        # Iniate a new directory
-        dest.mkdir()
+      # Load in the servers
+      # TODO: How can this file be distributed?
+      with open("data/servers.yaml", "r") as handle:
+        servers = yaml.load(handle.read())
 
-    if not args["<db_key>"]:
+      # Load in the registry: this is used to crosscheck db_key with server
+      # TODO: Perhaps crosscheck version of database with option?
+      with open("data/registry.yaml", "r") as handle:
+        registry = yaml.load(handle.read())
+
+      # Extract the values if there are any (else set default)
+      dest = path(config.get("dest", "databases"))
+      maxWait = args.get("--wait", config.get("maxWait", 0))
+
+      # Create a new destination folder if needed
+      if not dest.exists() and not args["--dry"]:
+        if dest.isfile():
+          sys.exit("Your save directory ({dest}) has to be a valid folder!"
+                   .format(dest=dest))
+        else:
+          # Iniate a new directory
+          dest.mkdir()
+
       # Open the local cosmid.yaml file and download all included databases
-      if path("cosmid.yaml").exists():
-        with open("cosmid.yaml", "r") as handle:
+      cosmidFile = path("cosmid.yaml")
+      if cosmidFile.exists():
+        with open(cosmidFile, "r") as handle:
           data = yaml.load(handle.read())
+      else:
+        # If the user hasn't provided a db from command line
+        if not args["<db_key>"]:
+          sys.exit("'cosmid.yaml' not detected; run 'cosmid init'")
 
+        data = {}
+
+      if not args["<db_key>"]:
         # Loop over each database reference
         # This only supports download the latest version for now
         dbs = [db_key for db_key in data]
 
       else:
-        sys.exit("No 'cosmid.yaml' detected; run 'cosmid init'")
+        # TODO: Enable multiple downloads from commandline
+        # TODO: Overwrite YAML file to include new databases if "--save"
+        dbs = [args["<db_key>"]]
 
-    else:
-      # TODO: Enable multiple downloads from commandline
-      # TODO: Overwrite YAML file to include new databases if "--save"
-      dbs = [args["<db_key>"]]
+      # TODO: Multithreading/processing
+      for db_key in dbs:
+        # Setup DB object from the registry
+        db = DB(**registry[db_key])
 
-    # TODO: Multithreading/processing
-    for db_key in dbs:
-      # Setup DB object from the registry
-      db = DB(**registry[db_key])
+        # Check if the file already exists
+        if (dest + "/" + db.dbName).exists():
+          # Move to next file
+          continue
 
-      # Check if the file already exists
-      if (dest + "/" + db.dbName).exists():
-        # Move to next file
-        continue
+        server = servers.get(db.server.lower())
+        url = server["url"]
+        username = server["username"]
+        # Get email from config or set password to empty string
+        password = config.get(server["password"], "")
 
-      server = servers.get(db.server.lower())
-      url = server["url"]
-      username = server["username"]
-      # Get email from config or set password to empty string
-      password = config.get(server["password"], "")
+        # Initiate FTP server connection
+        ftp = FTP(url, username, password)
 
-      # Initiate FTP server connection
-      ftp = FTP(url, username, password)
+        for f in ftp.listFiles(db.dirPath, db.pattern):
+          # Set what file to download and whether to force overwrites
+          fullPath = "{dir}/{file}".format(dir=db.dirPath, file=f)
 
-      for f in ftp.listFiles(db.dirPath, db.pattern):
-        # Set what file to download and whether to force overwrites
-        fullPath = "{dir}/{file}".format(dir=db.dirPath, file=f)
+          if args["--dry"]:
+            print("Not downloading: {0} to {1}"
+                  .format(fullPath, "{0}/{1}".format(dest, db.dbName)))
 
-        if args["--dry"]:
-          print("Not downloading: {0} to {1}"
-                .format(fullPath, "{0}/{1}".format(dest, db.dbName)))
+          else:
+            print("Downloading: {}".format("{0}/{1}".format(dest, db.dbName)))
+            fileSize = ftp.fileSize(fullPath)
+            print("Size: {} MB".format(fileSize))
+            ftp.commit(fullPath, "{0}/{1}".format(dest, db.dbName))
 
-        else:
-          print("Downloading: {}".format("{0}/{1}".format(dest, db.dbName)))
-          fileSize = ftp.fileSize(fullPath)
-          print("Size: {} MB".format(fileSize))
-          ftp.commit(fullPath, "{0}/{1}".format(dest, db.dbName))
+      if args["--save"]:
 
-    print("All databases downloaded to: '{}'".format(dest))
+        # Just support latest version for now
+        data[args["<db_key>"]] = "latest"
+
+        # Update YAML file (overwrite)
+        with open("cosmid.yaml", "w") as handle:
+          handle.write(yaml.dump(data, default_flow_style=False))
+
+      print("All databases downloaded to: '{}'".format(dest))
 
 
 if __name__ == "__main__":
