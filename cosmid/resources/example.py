@@ -17,10 +17,10 @@ class Resource(BaseResource):
                   "exampleFASTA.fasta.fai.gz", "exampleFASTA.fasta.gz"]
 
   def versions(self):
-    return [dirName for dirName in self.ftp.ls(self.baseUrl)]
+    return [float(dirName) for dirName in self.ftp.ls(self.baseUrl)]
 
   def latest(self):
-    return str(max([float(v) for v in self.versions()]))
+    return max(self.versions())
 
   def newer(self, current, challenger):
     # Simply check which float is biggest
