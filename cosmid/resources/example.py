@@ -12,19 +12,22 @@ class Resource(BaseResource):
     self.ftp = GATK()
     self.baseUrl = "bundle"
 
-    self.name = "exampleBAM.bam"
+    self.parts = 4
+    self.names = ["exampleBAM.bam", "exampleBAM.bam.bai.gz",
+                  "exampleFASTA.fasta.fai.gz", "exampleFASTA.fasta.gz"]
 
   def versions(self):
     return [dirName for dirName in self.ftp.ls(self.baseUrl)]
 
   def latest(self):
-    return max([float(v) for v in self.versions])
+    return str(max([float(v) for v in self.versions()]))
 
   def newer(self, current, challenger):
     # Simply check which float is biggest
     return float(challenger) > float(current)
 
   def paths(self, version):
-    # Only a single file
-    return ["{base}/{v}/exampleFASTA/exampleBAM.bam"
-            .format(base=self.baseUrl, v=version)]
+    # 4 files
+    base = "{base}/{v}/exampleFASTA".format(base=self.baseUrl, v=version)
+
+    return ["{base}/{file}".format(base=base, file=f) for f in self.names]

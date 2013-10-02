@@ -36,7 +36,7 @@ class FTP(object):
     """
     # Is the remote file gzipped? (Binary format)
     # Expect all files are of the same format
-    if fullPath.endswith(".gz"):
+    if fullPath.endswith(".gz") or fullPath.endswith(".bam"):
       mode = "b"
     else:
       # Default mode is to download non-binary files

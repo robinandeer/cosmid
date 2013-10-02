@@ -12,7 +12,8 @@ class Resource(BaseResource):
     self.ftp = NCBI()
     self.baseUrl = "pub/CCDS"
 
-    self.name = "CCDS.txt"
+    self.parts = 1
+    self.names = ["CCDS.txt"]
 
   def versions(self):
     return [dirName for dirName in self.ftp.ls(self.baseUrl + "/archive")

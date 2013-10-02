@@ -95,8 +95,12 @@ def main(args):
       # Get any currently downloaded resources
       current = history.get(resource_id) or {}
 
-      resource = load_class("cosmid.resources.{}.Resource"
+      try:
+        resource = load_class("cosmid.resources.{}.Resource"
                             .format(resource_id))()
+      except ImportError:
+        print("WARN: Can't find '{}'".format(resource_id))
+        continue
 
       # No specified version will match to the latest resource release
       if target == "latest":
@@ -113,32 +117,36 @@ def main(args):
                    .format(key=resource_id,
                            versions=", ".join(valid_versions)))
 
+        # Path to actual save location for the resource
+        resource_dest = path("{dest}/{key}".format(dest=dest, key=resource_id))
+        if not resource_dest.exists():
+          # Create it!
+          resource_dest.mkdir()
+
         # Download each file belonging to the resource
-        for dl in resource.paths(version):
+        for dl, name in zip(resource.paths(version), resource.names):
+          savePath = "{dest}/{name}".format(dest=resource_dest, name=name)
 
           if args["--dry"]:
-            print("Not downloading: {0} to {1}/{2}"
-                  .format(dl, dest, resource.name))
+            print("Not downloading: {0} to {1}".format(dl, savePath))
 
           else:
-            print("Downloading: {}".format("{0}/{1}"
-                  .format(dest, resource.name)))
-
+            # Prepare the user for what is going to happen
             fileSize = resource.ftp.fileSize(dl)
-            print("Size: {} MB".format(fileSize))
-            resource.ftp.commit(dl, "{0}/{1}".format(dest, resource.name))
+            print("Downloading: {path} - {size} MB"
+                  .format(path=savePath, size=fileSize))
+
+            # Commit to the download!
+            resource.ftp.commit(dl, savePath)
 
             history.add(resource_id, {
               "version": version,
               "target": target,
-              "name": resource.name,
+              "name": name,
               "source": dl
             })
 
-      # Close FTP connection
-      resource.ftp.close()
-
-      if args["--save"] or args["--update"]:
+      if args["--save"] or args["update"]:
         # Add the user supplied data to the project YAML file
         project.add(resource_id, target)
 
