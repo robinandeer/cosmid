@@ -3,7 +3,8 @@
 """Cosmid CLI
 
 Usage:
-  cosmid clone [<db_key>...] [--wait=<sec>] [--force] [--save] [--dry]
+  cosmid clone [<resource_id>...] [--wait=<sec>] [--force] [--save] [--dry]
+  cosmid update [<resource_id>...]
   cosmid (-h | --help)
   cosmid --version
 
@@ -59,23 +60,23 @@ def main(args):
     history = YamlReader(history_file)
 
     # Either download resources specified from CLI
-    if args["<db_key>"]:
-      db_keys = {}
-      for db_key in args["<db_key>"]:
+    if args["<resource_id>"]:
+      resource_ids = {}
+      for resource_id in args["<resource_id>"]:
         # I add an extra ``None`` to be able to replace it with "*" for
         # entries without version #-tags that will be only 1-item lists.
-        parts = db_key.split("#") + [None]
-        db_keys[parts[0]] = parts[1] or "*"
+        parts = resource_id.split("#") + [None]
+        resource_ids[parts[0]] = parts[1] or "*"
 
     else:
       # Or all the resources listed in "cosmid.yaml"
-      db_keys = project.resources
+      resource_ids = project.resources
 
-    for db_key, version in db_keys.iteritems():
+    for resource_id, version in resource_ids.iteritems():
       # Get any currently downloaded resources
-      current = history.get(db_key) or {}
+      current = history.get(resource_id) or {}
 
-      resource = load_class("cosmid.resources.{}.Resource".format(db_key))()
+      resource = load_class("cosmid.resources.{}.Resource".format(resource_id))()
 
       # "Any" will match to the latest resource release
       if version == "*":
@@ -88,7 +89,8 @@ def main(args):
         valid_versions = resource.versions()
         if version not in valid_versions:
           sys.exit("Invalid version for '{key}'. Choose one of {versions}."
-                    .format(key=db_key, versions=", ".join(valid_versions)))
+                    .format(key=resource_id,
+                            versions=", ".join(valid_versions)))
 
         for dl in resource.paths(version):
 
@@ -104,14 +106,14 @@ def main(args):
             print("Size: {} MB".format(fileSize))
             resource.ftp.commit(dl, "{0}/{1}".format(dest, resource.name))
 
-            history.add(db_key, {
+            history.add(resource_id, {
               "version": version,
               "name": resource.name,
               "source": dl
             })
 
       if args["--save"] or args["--update"]:
-        project.add(db_key, version)
+        project.add(resource_id, version)
 
     # Save over the old "cosmid.yaml" file
     project.save()
