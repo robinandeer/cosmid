@@ -13,7 +13,6 @@ Options:
   --version        Show version.
   -f --force       Overwrite existing files
   -w --wait=<sec>  How long to wait if the download is already started
-  -u --update      Update resources to the latest versions
 """
 from __future__ import print_function
 
@@ -27,18 +26,17 @@ from cosmid.yaml_reader import YamlReader
 
 
 def main(args):
-
+  # =======================================================
+  #  Configuring Cosmid for this project
+  # -------------------------------------------------------
   config = YamlReader(".cosmidrc")
 
   # Change current working dir if requested
   with cd(config.get("cwd", default=".")):
 
-    # Pick up the main cosmid.yaml file
-    cosmid = path("cosmid.yaml")
-
     # Extract the config values if there are any (else set default)
     dest = path(config.get("dest", default="databases"))
-    maxWait = int(args.get("--wait") or config.get("maxWait", default=0))
+    #maxWait = int(args.get("--wait") or config.get("maxWait", default=0))
 
     # Create a new destination folder if needed
     if not dest.exists() and not args["--dry"]:
@@ -48,50 +46,74 @@ def main(args):
         # Initiate a new directory
         dest.mkdir()
 
-    if not cosmid.exists():
-      sys.exit("'cosmid.yaml' not detected; run 'cosmid init'")
-
-    project = YamlReader(cosmid)
-
+    # Load history file consisting of already downloaded resources
     history_file = path("{}/.cosmid.yaml".format(dest))
-    if not history_file.exists():
+
+    # Create one if it doesn't exist unless dry-mode
+    if not history_file.exists() and not args["--dry"]:
       history_file.touch()
 
     history = YamlReader(history_file)
 
-    # Either download resources specified from CLI
+    # =======================================================
+    #  Decide which resources to download
+    #  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #  N.B. Updating specific resources without version will
+    #  replace existing releases with the latest version.
+    # -------------------------------------------------------
+    # Pick up the main cosmid.yaml file
+    cosmid = path("cosmid.yaml")
+
+    if not cosmid.exists() and not args["--dry"]:
+      cosmid.touch()
+
+    project = YamlReader(cosmid)
+
+    # Download resources specified from CLI
     if args["<resource_id>"]:
       resource_ids = {}
       for resource_id in args["<resource_id>"]:
         # I add an extra ``None`` to be able to replace it with "*" for
         # entries without version #-tags that will be only 1-item lists.
         parts = resource_id.split("#") + [None]
-        resource_ids[parts[0]] = parts[1] or "*"
+        resource_ids[parts[0]] = parts[1] or "latest"
 
     else:
-      # Or all the resources listed in "cosmid.yaml"
-      resource_ids = project.resources
+      if args["update"]:
+        # Only add already downloaded resources from the history-file
+        resource_ids = {key:"latest"
+                        for key, item in history.resources.iteritems()
+                        if item["target"] == "latest"}
+      else:
+        # Download all resources listed in "cosmid.yaml"
+        resource_ids = project.resources
 
-    for resource_id, version in resource_ids.iteritems():
+    # =======================================================
+    #  Download each of the resources
+    # -------------------------------------------------------
+    for resource_id, target in resource_ids.iteritems():
       # Get any currently downloaded resources
       current = history.get(resource_id) or {}
 
-      resource = load_class("cosmid.resources.{}.Resource".format(resource_id))()
+      resource = load_class("cosmid.resources.{}.Resource"
+                            .format(resource_id))()
 
-      # "Any" will match to the latest resource release
-      if version == "*":
+      # No specified version will match to the latest resource release
+      if target == "latest":
         version = resource.latest()
+      else:
+        version = target
 
+      # Make sure we're OK to download the resource
       if current.get("version", None) != version or args["--force"]:
-        # So we should download the resource
-
         # But first make sure the requested version is valid
         valid_versions = resource.versions()
         if version not in valid_versions:
           sys.exit("Invalid version for '{key}'. Choose one of {versions}."
-                    .format(key=resource_id,
-                            versions=", ".join(valid_versions)))
+                   .format(key=resource_id,
+                           versions=", ".join(valid_versions)))
 
+        # Download each file belonging to the resource
         for dl in resource.paths(version):
 
           if args["--dry"]:
@@ -108,18 +130,21 @@ def main(args):
 
             history.add(resource_id, {
               "version": version,
+              "target": target,
               "name": resource.name,
               "source": dl
             })
 
+      # Close FTP connection
+      resource.ftp.close()
+
       if args["--save"] or args["--update"]:
-        project.add(resource_id, version)
+        # Add the user supplied data to the project YAML file
+        project.add(resource_id, target)
 
     # Save over the old "cosmid.yaml" file
     project.save()
     history.save()
-
-    print("All databases downloaded to: '{}'".format(dest))
 
 
 if __name__ == "__main__":
