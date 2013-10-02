@@ -19,7 +19,11 @@ config = {
         "docopt",
         "path.py"
     ],
-    "packages": ["cosmid"],
+    "packages": [
+        "cosmid",
+        "cosmid.resources",
+        "cosmid.servers"
+    ],
     "scripts": ["scripts/cosmid"]
 }
 

@@ -3,138 +3,130 @@
 """Cosmid CLI
 
 Usage:
-  cosmid clone [--wait=<sec>] [--forced] [--dry]
-  cosmid clone <db_key> [--wait=<sec>] [--forced] [--save] [--dry]
+  cosmid clone [<db_key>...] [--wait=<sec>] [--force] [--save] [--dry]
   cosmid (-h | --help)
   cosmid --version
 
 Options:
-  -h --help          Show this screen.
-  --version          Show version.
-  -f --force         Overwrite existing files
-  -w --wait=<sec>    How long to wait if the download is already started
+  -h --help        Show this screen.
+  --version        Show version.
+  -f --force       Overwrite existing files
+  -w --wait=<sec>  How long to wait if the download is already started
+  -u --update      Update resources to the latest versions
 """
 from __future__ import print_function
+
 from docopt import docopt
-import yaml
 from path import path
-import os
 import sys
-cosmidPath = os.path.abspath("../cosmid")
-sys.path.insert(0, cosmidPath)
+
 import cosmid
-from cosmid.core import DB, File, FTP
-from cosmid.magicmethods import cd
+from cosmid.magicmethods import cd, load_class
+from cosmid.yaml_reader import YamlReader
 
 
 def main(args):
 
-    # First issue is to look for local ".cosmidrc"
-    # Load possible `.cosmidrc` file with options
-    if path(".cosmidrc").exists():
-      with open(".cosmidrc", "r") as handle:
-        config = yaml.load(handle.read())
+  config = YamlReader(".cosmidrc")
+
+  # Change current working dir if requested
+  with cd(config.get("cwd", default=".")):
+
+    # Pick up the main cosmid.yaml file
+    cosmid = path("cosmid.yaml")
+
+    # Extract the config values if there are any (else set default)
+    dest = path(config.get("dest", default="databases"))
+    maxWait = int(args.get("--wait") or config.get("maxWait", default=0))
+
+    # Create a new destination folder if needed
+    if not dest.exists() and not args["--dry"]:
+      if dest.isfile():
+        sys.exit("Your save directory '{}' isn't a folder!".format(dest))
+      else:
+        # Initiate a new directory
+        dest.mkdir()
+
+    if not cosmid.exists():
+      sys.exit("'cosmid.yaml' not detected; run 'cosmid init'")
+
+    project = YamlReader(cosmid)
+
+    history_file = path("{}/.cosmid.yaml".format(dest))
+    if not history_file.exists():
+      history_file.touch()
+
+    history = YamlReader(history_file)
+
+    # Either download resources specified from CLI
+    if args["<db_key>"]:
+      db_keys = {}
+      for db_key in args["<db_key>"]:
+        # I add an extra ``None`` to be able to replace it with "*" for
+        # entries without version #-tags that will be only 1-item lists.
+        parts = db_key.split("#") + [None]
+        db_keys[parts[0]] = parts[1] or "*"
 
     else:
-      config = {}
+      # Or all the resources listed in "cosmid.yaml"
+      db_keys = project.resources
 
-    # Change current working dir if specified, otherwise stick to the current
-    # by default.
-    with cd(config.get("cwd", ".")):
+    for db_key, version in db_keys.iteritems():
+      # Get any currently downloaded resources
+      current = history.get(db_key) or {}
 
-      # Load in the servers
-      # TODO: How can this file be distributed?
-      with open("data/servers.yaml", "r") as handle:
-        servers = yaml.load(handle.read())
+      resource = load_class("cosmid.resources.{}.Resource".format(db_key))()
 
-      # Load in the registry: this is used to crosscheck db_key with server
-      # TODO: Perhaps crosscheck version of database with option?
-      with open("data/registry.yaml", "r") as handle:
-        registry = yaml.load(handle.read())
+      # "Any" will match to the latest resource release
+      if version == "*":
+        version = resource.latest()
 
-      # Extract the values if there are any (else set default)
-      dest = path(config.get("dest", "databases"))
-      maxWait = args.get("--wait", config.get("maxWait", 0))
+      if current.get("version", None) != version or args["--force"]:
+        # So we should download the resource
 
-      # Create a new destination folder if needed
-      if not dest.exists() and not args["--dry"]:
-        if dest.isfile():
-          sys.exit("Your save directory ({dest}) has to be a valid folder!"
-                   .format(dest=dest))
-        else:
-          # Iniate a new directory
-          dest.mkdir()
+        # But first make sure the requested version is valid
+        valid_versions = resource.versions()
+        if version not in valid_versions:
+          sys.exit("Invalid version for '{key}'. Choose one of {versions}."
+                    .format(key=db_key, versions=", ".join(valid_versions)))
 
-      # Open the local cosmid.yaml file and download all included databases
-      cosmidFile = path("cosmid.yaml")
-      if cosmidFile.exists():
-        with open(cosmidFile, "r") as handle:
-          data = yaml.load(handle.read())
-      else:
-        # If the user hasn't provided a db from command line
-        if not args["<db_key>"]:
-          sys.exit("'cosmid.yaml' not detected; run 'cosmid init'")
-
-        data = {}
-
-      if not args["<db_key>"]:
-        # Loop over each database reference
-        # This only supports download the latest version for now
-        dbs = [db_key for db_key in data]
-
-      else:
-        # TODO: Enable multiple downloads from commandline
-        # TODO: Overwrite YAML file to include new databases if "--save"
-        dbs = [args["<db_key>"]]
-
-      # TODO: Multithreading/processing
-      for db_key in dbs:
-        # Setup DB object from the registry
-        db = DB(**registry[db_key])
-
-        # Check if the file already exists
-        if (dest + "/" + db.dbName).exists():
-          # Move to next file
-          continue
-
-        server = servers.get(db.server.lower())
-        url = server["url"]
-        username = server["username"]
-        # Get email from config or set password to empty string
-        password = config.get(server["password"], "")
-
-        # Initiate FTP server connection
-        ftp = FTP(url, username, password)
-
-        for f in ftp.listFiles(db.dirPath, db.pattern):
-          # Set what file to download and whether to force overwrites
-          fullPath = "{dir}/{file}".format(dir=db.dirPath, file=f)
+        for dl in resource.paths(version):
 
           if args["--dry"]:
-            print("Not downloading: {0} to {1}"
-                  .format(fullPath, "{0}/{1}".format(dest, db.dbName)))
+            print("Not downloading: {0} to {1}/{2}"
+                  .format(dl, dest, resource.name))
 
           else:
-            print("Downloading: {}".format("{0}/{1}".format(dest, db.dbName)))
-            fileSize = ftp.fileSize(fullPath)
+            print("Downloading: {}".format("{0}/{1}"
+                  .format(dest, resource.name)))
+
+            fileSize = resource.ftp.fileSize(dl)
             print("Size: {} MB".format(fileSize))
-            ftp.commit(fullPath, "{0}/{1}".format(dest, db.dbName))
+            resource.ftp.commit(dl, "{0}/{1}".format(dest, resource.name))
 
-      if args["--save"]:
+            history.add(db_key, {
+              "version": version,
+              "name": resource.name,
+              "source": dl
+            })
 
-        # Just support latest version for now
-        data[args["<db_key>"]] = "latest"
+      if args["--save"] or args["--update"]:
+        project.add(db_key, version)
 
-        # Update YAML file (overwrite)
-        with open("cosmid.yaml", "w") as handle:
-          handle.write(yaml.dump(data, default_flow_style=False))
+    # Save over the old "cosmid.yaml" file
+    project.save()
+    history.save()
 
-      print("All databases downloaded to: '{}'".format(dest))
+    print("All databases downloaded to: '{}'".format(dest))
 
 
 if __name__ == "__main__":
     args = docopt(__doc__, version="cosmid {v}".format(v=cosmid.__version__))
     main(args)
+
+
+#   - gzip/concat if nessesary
+# cosmid init
 
 # # Bash
 # for chrm in "chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18" "chr19" "chr20" "chr21" "chr22" "chrX" "chrY"
