@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+from ..resource import BaseResource
+from ..servers.ucsc import UCSC
+
+
+class Resource(BaseResource):
+  """docstring for Ensembl Assembly Resource"""
+  def __init__(self):
+    super(Resource, self).__init__()
+
+    self.ftp = UCSC()
+    self.baseUrl = "goldenPath"
+
+    self.parts = 1
+    self.names = ["UCSC.Homo_sapiens.tar.gz"]
+
+  def versions(self):
+    # Only one release
+    return [dirName for dirName in
+            self.ftp.listFiles(self.baseUrl, "hg[1-9]*")]
+
+  def latest(self):
+    number = max([int(v.replace("hg", "")) for v in self.versions()])
+    return "hg{}".format(number)
+
+  def newer(self, current, challenger):
+    return int(challenger.replace("hg", "")) > int(current.replace("hg", ""))
+
+  def paths(self, version):
+    base = "{base}/{v}/bigZips".format(base=self.baseUrl, v=version)
+
+    # If the version if new than 'hg18' it will be a '.tar.gz' file
+    if self.newer("hg18", version):
+      return ["{base}/chromFa.zip".format(base=base)]
+
+      # This will be fixed in the future but for now...
+      print("N.B. Please rename the downloaded file to '.zip'"
+            "before extracting!")
+
+    else:
+      return ["{base}/chromFa.tar.gz".format(base=self.baseUrl)]
