@@ -5,6 +5,7 @@
 Usage:
   cosmid clone [<resource_id>...] [--wait=<sec>] [--force] [--save] [--dry]
   cosmid update [<resource_id>...]
+  cosmid search <query>
   cosmid (-h | --help)
   cosmid --version
 
@@ -22,14 +23,14 @@ import sys
 
 import cosmid
 from cosmid.magicmethods import cd, load_class
-from cosmid.yaml_reader import YamlReader
+from cosmid.yaml_reader import Reader
 
 
 def main(args):
   # =======================================================
   #  Configuring Cosmid for this project
   # -------------------------------------------------------
-  config = YamlReader(".cosmidrc")
+  config = Reader(".cosmidrc")
 
   # Change current working dir if requested
   with cd(config.get("cwd", default=".")):
@@ -53,7 +54,7 @@ def main(args):
     if not history_file.exists() and not args["--dry"]:
       history_file.touch()
 
-    history = YamlReader(history_file)
+    history = Reader(history_file)
 
     # =======================================================
     #  Decide which resources to download
@@ -67,7 +68,7 @@ def main(args):
     if not cosmid.exists() and not args["--dry"]:
       cosmid.touch()
 
-    project = YamlReader(cosmid)
+    project = Reader(cosmid)
 
     # Download resources specified from CLI
     if args["<resource_id>"]:
