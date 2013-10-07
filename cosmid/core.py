@@ -3,7 +3,9 @@
 from __future__ import print_function
 import ftputil
 import fnmatch
+import pkgutil
 
+import resources
 
 class FTP(object):
   """docstring for FTP"""
@@ -44,3 +46,33 @@ class FTP(object):
 
     # Initiate download of the file
     self.ftp.download(fullPath, dest, mode)
+
+
+class Registry(object):
+  """docstring for Registry"""
+  def __init__(self):
+    super(Registry, self).__init__()
+    
+  def search(self, verbose=False):
+    """
+    Source: http://stackoverflow.com/questions/1707709/list-all-the-modules-that-are-part-of-a-python-package
+    """
+    if verbose:
+      # Get keys and docstrings
+      # Store everything here
+      items = []
+
+      prefix = resources.__name__ + "."
+      modules = pkgutil.iter_modules(resources.__path__, prefix)
+      for importer, modname, ispkg in modules:
+        module = __import__(modname, fromlist="dummy")
+
+        # Save name and docstring
+        items.append((modname, module.__doc__))
+
+    else:
+      # Just get the keys
+      items = [(modname, None) for importer, modname, ispkg in
+               pkgutil.iter_modules(resources.__path__)]
+
+    return items

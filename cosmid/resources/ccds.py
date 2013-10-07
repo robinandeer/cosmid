@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+"""
+The Consensus CoDing Sequence (CCDS) project is a collaborative effort to 
+identify a core set of human and mouse protein-coding regions that are 
+consistently annotated and of high quality. The long-term goal is to support 
+convergence toward a standard set of gene annotations.
+"""
 
 from ..resource import BaseResource
 from ..servers.ncbi import NCBI
