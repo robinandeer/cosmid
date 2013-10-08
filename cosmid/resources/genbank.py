@@ -9,6 +9,8 @@ class Resource(BaseResource):
   def __init__(self):
     super(Resource, self).__init__()
 
+    self.id = "genbank"
+
     self.ftp = NCBI()
     self.baseUrl = ("genbank/genomes/Eukaryotes/vertebrates_mammals/"
                     "Homo_sapiens")

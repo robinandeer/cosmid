@@ -23,7 +23,7 @@ class BaseResource(object):
     self.server = None
 
     # The keyword for the resource
-    self.keyword = "resource"
+    self.id = "resource"
 
   def versions(self):
     """

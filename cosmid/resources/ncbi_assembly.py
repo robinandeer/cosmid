@@ -9,6 +9,8 @@ class Resource(BaseResource):
   def __init__(self):
     super(Resource, self).__init__()
 
+    self.id = "ncbi_assembly"
+
     self.ftp = NCBI()
     self.baseUrl = "genomes/Homo_sapiens"
 

@@ -9,6 +9,8 @@ class Resource(BaseResource):
   def __init__(self):
     super(Resource, self).__init__()
 
+    self.id = "ensembl_assembly"
+
     self.ftp = Ensembl()
 
     self.parts = 1

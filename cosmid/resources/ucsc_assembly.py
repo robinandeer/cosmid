@@ -10,6 +10,8 @@ class Resource(BaseResource):
   def __init__(self):
     super(Resource, self).__init__()
 
+    self.id = "ucsc_assembly"
+
     self.ftp = UCSC()
     self.baseUrl = "goldenPath"
 

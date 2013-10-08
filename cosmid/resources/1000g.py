@@ -12,6 +12,8 @@ class Resource(iResource):
   def __init__(self):
     super(Resource, self).__init__()
 
+    self.id = "1000g"
+
     self.parts = 1
     self.names = ["1000G_omni.vcf.gz"]
 

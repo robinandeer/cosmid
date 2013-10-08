@@ -50,14 +50,12 @@ class Messenger(object):
     :param str category: (optional) The type of message (see below)
     :returns: self
     """
-    if category == "warning":
-      statement = self.warn()
-    elif category == "error":
-      statement = self.error()
-    elif category == "update":
-      statement = self.update()
-    else:
-      statement = self.note()
+    # Pythonic switch statement
+    statement = {
+      "warning": self.warn(),
+      "error": self.error(),
+      "update": self.update() 
+    }.get(category, self.note())
 
     # Print the parts with tab-separation
     print("\t".join((self.sender, statement, message)))
@@ -75,3 +73,6 @@ class Messenger(object):
 
   def update(self):
     return colored("UPDATE", "green", attrs=["bold"])
+
+  def ghost(self):
+    return colored("NOTE", "white", attrs=["bold", "dark"])

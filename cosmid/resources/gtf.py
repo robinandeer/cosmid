@@ -8,6 +8,8 @@ class Resource(iResource):
   def __init__(self):
     super(Resource, self).__init__()
 
+    self.id = "gtf"
+
     self.names = ["Ensembl.Homo_sapiens.gtf.gz"]
 
   def paths(self, version):

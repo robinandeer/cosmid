@@ -15,6 +15,8 @@ class Resource(BaseResource):
   def __init__(self):
     super(Resource, self).__init__()
 
+    self.id = "ccds"
+
     self.ftp = NCBI()
     self.baseUrl = "pub/CCDS"
 

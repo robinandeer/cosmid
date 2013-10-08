@@ -3,7 +3,7 @@
 """Cosmid CLI
 
 Usage:
-  cosmid clone [<resource_id>...] [--wait=<sec>] [--force] [--save] [--dry]
+  cosmid clone [<resource_id>...] [--wait=<sec>] [--force] [--save] [--dry] [--quiet]
   cosmid update [<resource_id>...]
   cosmid search <query>
   cosmid (-h | --help)
@@ -29,37 +29,26 @@ from cosmid.core import Registry
 
 
 def main(args):
-  # Initialize Messenger
-  messenger = Messenger("cosmid")
+  # Always initiate the registry!
+  # 1. Config, 2. Project file, 3. History file
+  hub = Registry(dry=args["--dry"], quiet=args["--quiet"])
 
   # -------------------------------------------------------
   #  Configuring Cosmid for this project
   # -------------------------------------------------------
-  # Unless found, the config file should just be ignored!
-  # We shouldn't however either ever overwrite anything in the file.
-  if path(".cosmidrc").isfile():
-    config = DefaultReader(".cosmidrc")
-  else:
-    config = DefaultReader()
-
-  # Extract the config values if there are any (else set default)
-  dest = path(config.get("dest", default="databases"))
-
-  # Change current working dir if requested
-  with cd(config.get("cwd", default=".")):
-
-    hub = Registry()
+  # Change current working dir (or '.')
+  with cd(hub.config.cwd):
 
     if args["search"]:
       # Search the registry using the query
       options = hub.search(args["<query>"])
 
       # Just to make sure we print something (feedback)
-      print("Search results:")
+      print("Search results:\n")
 
       # Print each of the matches (top 5) to the console as updates
       for option in options:
-        messenger.send("update", option[0])
+        hub.messenger.send("note", option[0])
 
     else:
 
@@ -68,67 +57,47 @@ def main(args):
 
         if dest.isfile():
           message = "Save directory is a file: '{}'".format(dest)
-          messenger.send(message, "error")
+          hub.messenger.send(message, "error")
           sys.exit()
 
         else:
           # Initiate a new directory
-          dest.mkdir()
+          hub.dest.mkdir()
 
-      # Load history file consisting of already downloaded resources
-      history_file = path("{}/.cosmid.yaml".format(dest))
-
-      # Create one if it doesn't exist unless dry-mode
-      if not history_file.exists() and not args["--dry"]:
-        history_file.touch()
-
-      history = Reader(history_file)
-
-      # =======================================================
+      # -------------------------------------------------------
       #  Decide which resources to download
       #  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       #  N.B. Updating specific resources without version will
       #  replace existing releases with the latest version.
       # -------------------------------------------------------
-      # Pick up the main cosmid.yaml file
-      cosmid = path("cosmid.yaml")
-
-      if not cosmid.exists() and not args["--dry"]:
-        cosmid.touch()
-
-      project = Reader(cosmid)
-
       # Download resources specified from CLI
       if args["<resource_id>"]:
-        resource_ids = {}
+        resources = {}
         for resource_id in args["<resource_id>"]:
           # I add an extra ``None`` to be able to replace it with "*" for
           # entries without version #-tags that will be only 1-item lists.
           parts = resource_id.split("#") + [None]
-          resource_ids[parts[0]] = parts[1] or "latest"
+          resources[parts[0]] = parts[1] or "latest"
 
       else:
         if args["update"]:
-          # Only add already downloaded resources from the history-file
-          resource_ids = {key:"latest"
-                          for key, item in history.resources.iteritems()
-                          if item["target"] == "latest"}
+          # Add 'updateable' resources from the history-file
+          resources = hub.history.updateable()
         else:
           # Download all resources listed in "cosmid.yaml"
-          resource_ids = project.resources
+          resources = hub.project.find()
 
-      # =======================================================
+      # -------------------------------------------------------
       #  Download each of the resources
       # -------------------------------------------------------
-      for resource_id, target in resource_ids.iteritems():
-        # Get any currently downloaded resources
-        current = history.get(resource_id) or {}
+      for resource_id, target in resources.iteritems():
 
+        # Either import the resource class or print warning and move on.
         try:
-          resource = load_class("cosmid.resources.{}.Resource"
-                              .format(resource_id))()
+          resource = hub.get(resource_id)
         except ImportError:
-          print("WARN: Can't find '{}'".format(resource_id))
+          message = "Can't find '{}'".format(resource_id)
+          hub.messenger.send("warning", message)
           continue
 
         # No specified version will match to the latest resource release
@@ -137,20 +106,7 @@ def main(args):
         else:
           version = target
 
-        # Make sure we're OK to download the resource
-        if current.get("version", None) != version or args["--force"]:
-          # But first make sure the requested version is valid
-          valid_versions = resource.versions()
-          if version not in valid_versions:
-            sys.exit("Invalid version for '{key}'. Choose one of {versions}."
-                     .format(key=resource_id,
-                             versions=", ".join(valid_versions)))
-
-          # Path to actual save location for the resource
-          resource_dest = path("{dest}/{key}".format(dest=dest, key=resource_id))
-          if not resource_dest.exists():
-            # Create it!
-            resource_dest.mkdir()
+        if hub.goahead(resource, version) or not args["--force"]:
 
           # Download each file belonging to the resource
           for dl, name in zip(resource.paths(version), resource.names):

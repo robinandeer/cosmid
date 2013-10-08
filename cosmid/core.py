@@ -4,12 +4,14 @@ from __future__ import print_function
 import ftputil
 import fnmatch
 import pkgutil
+from path import path
 
 from fuzzywuzzy import process
 
 import resources
 from magicmethods import load_class
-from yaml import Reader
+from yaml import DefaultReader, HistoryReader
+from messenger import Messenger
 
 
 class FTP(object):
@@ -55,11 +57,27 @@ class FTP(object):
 
 class Registry(object):
   """docstring for Registry"""
-  def __init__(self, cosmid_path, history_path):
+  def __init__(self, dry=False, quiet=False):
     super(Registry, self).__init__()
 
-    self.project = Reader(cosmid_path)
-    self.history = Reader(history_path)
+    # Set up general settings
+    self.dry = dry
+    self.quiet = quiet
+
+    # Extract stuff from config
+    self.email = self.config.find("email")
+    self.dest = path(self.config.find("dest"))
+    self.cwd = self.config.find("cwd", default=".")
+
+    # Set up YAML parsers
+    self.config = DefaultReader(".cosmidrc")
+    self.project = DefaultReader("cosmid.yaml")
+
+    # Load history file consisting of already downloaded resources
+    self.history = HistoryReader(path(self.dest + "/.cosmid.yaml"))
+
+    # Set up a :class:`cosmid.messenger.Messenger`
+    self.messenger = Messenger("cosmid")
 
   def get(self, resource_id):
     """
@@ -162,3 +180,45 @@ class Registry(object):
       return result
     else:
       return None
+
+  def goahead(self, resource, target):
+    """
+    Determines whether it's any idea in going ahead with a download.
+    """
+    # Get any currently downloaded resources
+    current = self.history.find(resource.id, default={})
+
+    # Get the best matching version
+    best_match = self.matchOne(target, resource.versions())
+
+    # Make sure we haven't already download the resource
+    if best_match == target:
+      message = "Resource already downloaded: '{id}'.".format(id=resource.id)
+      self.messenger.send("update", message)
+
+      return False
+
+    else:
+      # Make sure the requested version is valid
+      if not best_match:
+
+        message = ("Non-matching key: '{key}'. Choose one of {vers}."
+                   .format(key=resource.id, vers=", ".join(valid_versions)))
+
+        self.messenger.send("error", message)
+
+        return False
+
+    # Inform the user what resource version was resolved
+    message = ("'{id}#{target}' resolved to '{id}#{v}'."
+               .format(id=resource.id, target=target, v=best_match))
+    self.messenger.send("note", message)
+
+    return True
+
+
+# # Path to actual save location for the resource
+# resource_dest = path("{dest}/{key}".format(dest=dest, key=resource_id))
+# if not resource_dest.exists():
+#   # Create it!
+#   resource_dest.mkdir()
