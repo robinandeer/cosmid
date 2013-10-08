@@ -40,7 +40,7 @@ class Messenger(object):
 
     return self
 
-  def send(self, message, category=None):
+  def send(self, category, message):
     """
     <public> Send a message to the console formatted according to the category.
     Different categories are formatted with different colors. The sender ID

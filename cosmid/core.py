@@ -9,7 +9,7 @@ from fuzzywuzzy import process
 
 import resources
 from magicmethods import load_class
-from yaml_reader import Reader
+from yaml import Reader
 
 
 class FTP(object):

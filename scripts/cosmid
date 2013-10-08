@@ -23,137 +23,165 @@ import sys
 
 import cosmid
 from cosmid.magicmethods import cd, load_class
-from cosmid.yaml_reader import Reader
+from cosmid.yaml import DefaultReader
+from cosmid.messenger import Messenger
+from cosmid.core import Registry
 
 
 def main(args):
-  # =======================================================
+  # Initialize Messenger
+  messenger = Messenger("cosmid")
+
+  # -------------------------------------------------------
   #  Configuring Cosmid for this project
   # -------------------------------------------------------
-  config = Reader(".cosmidrc")
+  # Unless found, the config file should just be ignored!
+  # We shouldn't however either ever overwrite anything in the file.
+  if path(".cosmidrc").isfile():
+    config = DefaultReader(".cosmidrc")
+  else:
+    config = DefaultReader()
+
+  # Extract the config values if there are any (else set default)
+  dest = path(config.get("dest", default="databases"))
 
   # Change current working dir if requested
   with cd(config.get("cwd", default=".")):
 
-    # Extract the config values if there are any (else set default)
-    dest = path(config.get("dest", default="databases"))
-    #maxWait = int(args.get("--wait") or config.get("maxWait", default=0))
+    hub = Registry()
 
-    # Create a new destination folder if needed
-    if not dest.exists() and not args["--dry"]:
-      if dest.isfile():
-        sys.exit("Your save directory '{}' isn't a folder!".format(dest))
-      else:
-        # Initiate a new directory
-        dest.mkdir()
+    if args["search"]:
+      # Search the registry using the query
+      options = hub.search(args["<query>"])
 
-    # Load history file consisting of already downloaded resources
-    history_file = path("{}/.cosmid.yaml".format(dest))
+      # Just to make sure we print something (feedback)
+      print("Search results:")
 
-    # Create one if it doesn't exist unless dry-mode
-    if not history_file.exists() and not args["--dry"]:
-      history_file.touch()
-
-    history = Reader(history_file)
-
-    # =======================================================
-    #  Decide which resources to download
-    #  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #  N.B. Updating specific resources without version will
-    #  replace existing releases with the latest version.
-    # -------------------------------------------------------
-    # Pick up the main cosmid.yaml file
-    cosmid = path("cosmid.yaml")
-
-    if not cosmid.exists() and not args["--dry"]:
-      cosmid.touch()
-
-    project = Reader(cosmid)
-
-    # Download resources specified from CLI
-    if args["<resource_id>"]:
-      resource_ids = {}
-      for resource_id in args["<resource_id>"]:
-        # I add an extra ``None`` to be able to replace it with "*" for
-        # entries without version #-tags that will be only 1-item lists.
-        parts = resource_id.split("#") + [None]
-        resource_ids[parts[0]] = parts[1] or "latest"
+      # Print each of the matches (top 5) to the console as updates
+      for option in options:
+        messenger.send("update", option[0])
 
     else:
-      if args["update"]:
-        # Only add already downloaded resources from the history-file
-        resource_ids = {key:"latest"
-                        for key, item in history.resources.iteritems()
-                        if item["target"] == "latest"}
+
+      # Create a new destination folder if needed
+      if not (dest.exists() and args["--dry"]):
+
+        if dest.isfile():
+          message = "Save directory is a file: '{}'".format(dest)
+          messenger.send(message, "error")
+          sys.exit()
+
+        else:
+          # Initiate a new directory
+          dest.mkdir()
+
+      # Load history file consisting of already downloaded resources
+      history_file = path("{}/.cosmid.yaml".format(dest))
+
+      # Create one if it doesn't exist unless dry-mode
+      if not history_file.exists() and not args["--dry"]:
+        history_file.touch()
+
+      history = Reader(history_file)
+
+      # =======================================================
+      #  Decide which resources to download
+      #  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      #  N.B. Updating specific resources without version will
+      #  replace existing releases with the latest version.
+      # -------------------------------------------------------
+      # Pick up the main cosmid.yaml file
+      cosmid = path("cosmid.yaml")
+
+      if not cosmid.exists() and not args["--dry"]:
+        cosmid.touch()
+
+      project = Reader(cosmid)
+
+      # Download resources specified from CLI
+      if args["<resource_id>"]:
+        resource_ids = {}
+        for resource_id in args["<resource_id>"]:
+          # I add an extra ``None`` to be able to replace it with "*" for
+          # entries without version #-tags that will be only 1-item lists.
+          parts = resource_id.split("#") + [None]
+          resource_ids[parts[0]] = parts[1] or "latest"
+
       else:
-        # Download all resources listed in "cosmid.yaml"
-        resource_ids = project.resources
+        if args["update"]:
+          # Only add already downloaded resources from the history-file
+          resource_ids = {key:"latest"
+                          for key, item in history.resources.iteritems()
+                          if item["target"] == "latest"}
+        else:
+          # Download all resources listed in "cosmid.yaml"
+          resource_ids = project.resources
 
-    # =======================================================
-    #  Download each of the resources
-    # -------------------------------------------------------
-    for resource_id, target in resource_ids.iteritems():
-      # Get any currently downloaded resources
-      current = history.get(resource_id) or {}
+      # =======================================================
+      #  Download each of the resources
+      # -------------------------------------------------------
+      for resource_id, target in resource_ids.iteritems():
+        # Get any currently downloaded resources
+        current = history.get(resource_id) or {}
 
-      try:
-        resource = load_class("cosmid.resources.{}.Resource"
-                            .format(resource_id))()
-      except ImportError:
-        print("WARN: Can't find '{}'".format(resource_id))
-        continue
+        try:
+          resource = load_class("cosmid.resources.{}.Resource"
+                              .format(resource_id))()
+        except ImportError:
+          print("WARN: Can't find '{}'".format(resource_id))
+          continue
 
-      # No specified version will match to the latest resource release
-      if target == "latest":
-        version = resource.latest()
-      else:
-        version = target
+        # No specified version will match to the latest resource release
+        if target == "latest":
+          version = resource.latest()
+        else:
+          version = target
 
-      # Make sure we're OK to download the resource
-      if current.get("version", None) != version or args["--force"]:
-        # But first make sure the requested version is valid
-        valid_versions = resource.versions()
-        if version not in valid_versions:
-          sys.exit("Invalid version for '{key}'. Choose one of {versions}."
-                   .format(key=resource_id,
-                           versions=", ".join(valid_versions)))
+        # Make sure we're OK to download the resource
+        if current.get("version", None) != version or args["--force"]:
+          # But first make sure the requested version is valid
+          valid_versions = resource.versions()
+          if version not in valid_versions:
+            sys.exit("Invalid version for '{key}'. Choose one of {versions}."
+                     .format(key=resource_id,
+                             versions=", ".join(valid_versions)))
 
-        # Path to actual save location for the resource
-        resource_dest = path("{dest}/{key}".format(dest=dest, key=resource_id))
-        if not resource_dest.exists():
-          # Create it!
-          resource_dest.mkdir()
+          # Path to actual save location for the resource
+          resource_dest = path("{dest}/{key}".format(dest=dest, key=resource_id))
+          if not resource_dest.exists():
+            # Create it!
+            resource_dest.mkdir()
 
-        # Download each file belonging to the resource
-        for dl, name in zip(resource.paths(version), resource.names):
-          savePath = "{dest}/{name}".format(dest=resource_dest, name=name)
+          # Download each file belonging to the resource
+          for dl, name in zip(resource.paths(version), resource.names):
+            savePath = "{dest}/{name}".format(dest=resource_dest, name=name)
 
-          if args["--dry"]:
-            print("Not downloading: {0} to {1}".format(dl, savePath))
+            if args["--dry"]:
+              print("Not downloading: {0} to {1}".format(dl, savePath))
 
-          else:
-            # Prepare the user for what is going to happen
-            fileSize = resource.ftp.fileSize(dl)
-            print("Downloading: {path} - {size} MB"
-                  .format(path=savePath, size=fileSize))
+            else:
+              # Prepare the user for what is going to happen
+              fileSize = resource.ftp.fileSize(dl)
+              print("Downloading: {path} - {size} MB"
+                    .format(path=savePath, size=fileSize))
 
-            # Commit to the download!
-            resource.ftp.commit(dl, savePath)
+              # Commit to the download!
+              resource.ftp.commit(dl, savePath)
 
-            history.add(resource_id, {
-              "version": version,
-              "target": target,
-              "name": name,
-              "source": dl
-            })
+              history.add(resource_id, {
+                "version": version,
+                "target": target,
+                "name": name,
+                "source": dl
+              })
 
-      if args["--save"] or args["update"]:
-        # Add the user supplied data to the project YAML file
-        project.add(resource_id, target)
+        if args["--save"] or args["update"]:
+          # Add the user supplied data to the project YAML file
+          project.add(resource_id, target)
 
-    # Save over the old "cosmid.yaml" file
-    project.save()
-    history.save()
+      # Save over the old "cosmid.yaml" file
+      project.save()
+      history.save()
 
 
 if __name__ == "__main__":
