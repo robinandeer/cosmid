@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+1000 Genomes - A Deep Catalog of Human Genetic Variation
+"""
 
 # We can another GATK resource since it's pretty much the same
 from example import Resource as iResource

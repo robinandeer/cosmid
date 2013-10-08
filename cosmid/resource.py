@@ -11,6 +11,7 @@ Each resource is responsible for:
 - Keeps track of what the resource is called locally
 """
 
+
 class BaseResource(object):
   """
   A Resource represents a local genomics resource that can be on the file

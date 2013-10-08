@@ -3,6 +3,13 @@
 from __future__ import print_function
 import ftputil
 import fnmatch
+import pkgutil
+
+from fuzzywuzzy import process
+
+import resources
+from magicmethods import load_class
+from yaml_reader import Reader
 
 
 class FTP(object):
@@ -44,3 +51,114 @@ class FTP(object):
 
     # Initiate download of the file
     self.ftp.download(fullPath, dest, mode)
+
+
+class Registry(object):
+  """docstring for Registry"""
+  def __init__(self, cosmid_path, history_path):
+    super(Registry, self).__init__()
+
+    self.project = Reader(cosmid_path)
+    self.history = Reader(history_path)
+
+  def get(self, resource_id):
+    """
+    <public> Returns an instance of the specified resource class. Raises
+    ``ImportError`` when failing to import a resource.
+
+    .. code-block:: python
+
+      >>> resource = registry.get("ccds")
+      >>> resource.latest()
+      'Hs104'
+
+    :param str resource_id: The resource key (name of module)
+    :returns: A class instance of the resource
+    """
+    return load_class("cosmid.resources.{}.Resource".format(resource_id))()
+    
+  def ls(self):
+    """
+    <public> Returns a list of resource IDs and docstrings for all the
+    included resource modules.
+
+    *Reference*: http://stackoverflow.com/questions/1707709/list-all-the-modules-that-are-part-of-a-python-package
+
+    .. code-block:: python
+
+      >>> registry.ls()
+      [('ccds', 'A curated database of generic element'), ...]
+
+    :returns: A list of tuples: ``(resource_id, docstring)``
+    :rtype: list
+    """
+    # Store everything here
+    items = []
+
+    prefix = resources.__name__ + "."
+    # Fetch all the resource modules
+    modules = pkgutil.iter_modules(resources.__path__, prefix)
+
+    # Loop over all resource modules
+    for importer, modname, ispkg in modules:
+      # Load the `Resource` class for the module
+      module = load_class(modname)
+
+      # Save name and docstring
+      items.append((modname, module.__doc__))
+
+    return items
+
+  def search(self, query, limit=5):
+    """
+    <public> Fuzzy matches a query string against each of the resource IDs and
+    returns a limited number of results in order of match score.
+
+    .. code-block:: python
+
+      >>> registry.search("asmebly", limit=2)
+      [('ensembl_assembly', 68),
+       ('ncbi_assembly', 68)]
+
+    :param str query: A string to match against the resource IDs
+    :param int limit: (optional) A maximum number of results to return
+    :returns: A list of tuples: ``(resource_id, score)`
+    :rtype: list
+    """
+    # List all the available resources
+    resources = self.ls()
+
+    # Focus on resource IDs
+    resource_ids = [resource[0] for resource in resources]
+
+    # Fuzzy match against the resource IDs and return in order of best match
+    return process.extract(query, resource_ids, limit=limit)
+
+  def matchOne(self, target, options, threshold=60):
+    """
+    <public> Fuzzy matches e.g. a target version tag against a list of options.
+    Returns the most likely match if the match score is sufficient.
+
+    .. code-block:: python
+
+      >>> resource = registry.get("ccds")
+      >>> registry.matchOne(104, resource.versions())
+      'Hs104'
+
+      >>> registry.matchOne("ensembl", registry.ls())
+      'ensembl_assembly'
+
+    :param object target: Any Python object to match with
+    :param list options: A list of possible options to match against
+    :param int threshold: A lower threshold for accepting a best match
+    :returns: The object with the best match (unless score is below threshold)
+    :rtype: Python object
+    """
+    # Match against the options and extract the top match only
+    result, score = process.extractOne(target, options)
+
+    # Arbitrary lower limit for returning a *mathcing* result
+    if score >= threshold:
+      return result
+    else:
+      return None
