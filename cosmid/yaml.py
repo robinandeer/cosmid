@@ -5,54 +5,114 @@ from path import path
 
 
 class DefaultReader(object):
-  """docstring for DefaultReader"""
-  def __init__(self, yaml_path):
-    super(DefaultReader, self).__init__()
-    self.path = path(yaml_path)
-    self.resources = {}
+  """
+  A default YAML reader. Allows for safe parsing, basic adding and fetching
+  items as well as saving an updated YAML datastructre (``dict``).
 
-    # Load in the resources listed in the YAML file
-    self.load()
+  :param str yaml_path: (optional) Path to the YAML file to parse/save to.
+  """
+  def __init__(self, yaml_path=None):
+    super(DefaultReader, self).__init__()
+    self.items = {}
+
+    # Load in the resources listed in the YAML file if provided
+    if yaml_path:
+      self.load(yaml_path)
+
+  def __iter__(self):
+    """
+    <magic> Shortcut to iterate over all the keys and items.
+
+    :returns: An iterable returning tuples: (key, item)
+    """
+    return iter(self.items.iteritems())
 
   def load(self, yaml_path=None):
+    """
+    <public> Parse a local YAML-formatted file. Raises an ``IOError`` if the
+    path doesn't points to an existing file.
+
+    .. code-block:: python
+
+      >>> reader.load("~/Desktop/config.yaml")
+
+    :param str yaml_path: (optional) A path to the YAML file to parse
+    :returns: self
+    """
     if yaml_path:
       self.path = path(yaml_path)
 
-    if self.path.exists():
+    if self.path.isfile():
       with open(self.path, "r") as handle:
-        self.resources = yaml.safe_load(handle.read()) or {}
+        # Use safe load to protect from accidentally running malicious
+        # functions defined in the YAML file. Limit to simple str/int values.
+        self.items = yaml.safe_load(handle.read()) or {}
 
     else:
       raise IOError("No such file found: " + self.path)
 
     return self
 
-  def add(self, resource_id, version):
-    self.resources[resource_id] = version
+  def add(self, key, item):
+    """
+    <public> Adds an item associated with a key to the bottom level of the
+    YAML structure. The item could be any Python object but should be limited
+    to simple strings, ints, or dicts of such objects.
+
+    .. code-block:: python
+
+      >>> reader.add("ccds", "Hs104")
+
+    :param object key: Usually a string for use as an association key
+    :param object item: Associated ``str``, ``int``, or ``dict``
+    :returns: self
+    """
+    self.items[key] = item
 
     return self
-
-  def __iter__(self):
-    return iter(self.resources.iteritems())
 
   def save(self):
+    """
+    <public> Overwrites the file currently pointed to by the ``path``
+    attribute with valid YAML formatting.
+
+    :returns: self
+    """
     with open(self.path, "w") as handle:
-      handle.write(yaml.safe_dump(self.resources, default_flow_style=False))
+      handle.write(yaml.safe_dump(self.items, default_flow_style=False))
 
     return self
 
-  def find(self, resource_id=None, default=None):
-    if resource_id is None:
+  def find(self, key=None, default=None):
+    """
+    <public> Returns all items or a single item associated with a given key.
+    If a given key is not present the `default` object will be returned
+    instead.
+
+    .. code-block:: python
+
+      >>> reader.find("ccds", default="latest")
+
+    :param object key: (optional) Usually a string associated with the item
+    :param object default: (optional) What to return if the key isn't found
+    :returns: Either all items as a ``dict`` or a one matching the key
+    """
+    if key is None:
       # Return all
-      return self.resources
+      return self.items
     else:
-      return self.resources.get(resource_id, default)
+      return self.items.get(key, default)
 
 
 class HistoryReader(DefaultReader):
-  """docstring for HistoryReader"""
-  def __init__(self, path):
-    super(HistoryReader, self).__init__(path)
+  """
+  A specialized YAML reader for dealing with Cosmid History files. Inherits
+  from ``DefaultReader``.
+
+  :param str yaml_path: Path to the cosmid history file (.cosmid.yaml)
+  """
+  def __init__(self, yaml_path):
+    super(HistoryReader, self).__init__(yaml_path)
 
   def updateable(self, force=False):
     """
@@ -69,5 +129,5 @@ class HistoryReader(DefaultReader):
     """
     # Exclude perfect target<->version matches
     # If force is selected we include all resources
-    return {key:item["target"] for key, item in self.resources.iteritems()
+    return {key:item["target"] for key, item in self.items.iteritems()
             if item["target"] != item["version"] or force}
