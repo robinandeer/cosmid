@@ -1,19 +1,28 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import sys
-from termcolor import colored, cprint
+from termcolor import colored
 
 
 class Messenger(object):
-  """docstring for Messenger"""
-  def __init__(self, command=None):
+  """
+  Messenger Hub for sending formatted messages to the console. A number of
+  pre-defined categories exist like "warning", "error", "update" as shortcuts.
+
+  :param str sender: The program handle that will send the messages.
+  """
+  def __init__(self, sender=None):
     super(Messenger, self).__init__()
 
     # Who is sending the message?
-    self.command = command
+    self.sender = sender
 
   def welcome(self):
+    """
+    <public> Prints a colored welcome messages (ascii art).
+
+    :returns: self
+    """
     raw = """
      .o88b.  .d88b.  .d8888. .88b  d88. d888888b d8888b. 
     d8P  Y8 .8P  Y8. 88'  YP 88'YbdP`88   `88'   88  `8D 
@@ -23,14 +32,23 @@ class Messenger(object):
      `Y88P'  `Y88P'  `8888Y' YP  YP  YP Y888888P Y8888D' 
 
      {}
-    """.format(colored("=================| version 1.0 |=================",
+    """.format(colored("=================| version 0.2 |=================",
                        "white"))
 
+    # Print to the console
     print(colored(raw, "cyan"))
+
+    return self
 
   def send(self, message, category=None):
     """
-    Main entrypoint
+    <public> Send a message to the console formatted according to the category.
+    Different categories are formatted with different colors. The sender ID
+    will be printed first.
+
+    :param str message: The actual message to output to the console
+    :param str category: (optional) The type of message (see below)
+    :returns: self
     """
     if category == "warning":
       statement = self.warn()
@@ -42,7 +60,9 @@ class Messenger(object):
       statement = self.note()
 
     # Print the parts with tab-separation
-    print("\t".join((self.command, statement, message)))
+    print("\t".join((self.sender, statement, message)))
+
+    return self
 
   def warn(self):
     return colored("WARN", "yellow", attrs=["bold"])
