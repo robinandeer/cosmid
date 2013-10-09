@@ -10,7 +10,7 @@ from fuzzywuzzy import process
 
 import resources
 from magicmethods import load_class
-from yaml import DefaultReader, HistoryReader
+from yml import DefaultReader, HistoryReader
 from messenger import Messenger
 
 
@@ -57,21 +57,23 @@ class FTP(object):
 
 class Registry(object):
   """docstring for Registry"""
-  def __init__(self, dry=False, quiet=False):
+  def __init__(self):
     super(Registry, self).__init__()
 
-    # Set up general settings
-    self.dry = dry
-    self.quiet = quiet
+    try:
+      # Set up YAML parser for optional config file
+      self.config = DefaultReader(".cosmidrc")
+    except ImportError:
+      self.config = DefaultReader()
 
     # Extract stuff from config
     self.email = self.config.find("email")
-    self.dest = path(self.config.find("dest"))
     self.cwd = self.config.find("cwd", default=".")
+    self.dest = path("{base}/{folder}"
+                     .format(base=self.cwd, folder=self.config.find("dest")))
 
-    # Set up YAML parsers
-    self.config = DefaultReader(".cosmidrc")
-    self.project = DefaultReader("cosmid.yaml")
+    # The cosmid file is assciated with the resources rather than the 'project'
+    self.project = DefaultReader(self.cwd + "/cosmid.yaml")
 
     # Load history file consisting of already downloaded resources
     self.history = HistoryReader(path(self.dest + "/.cosmid.yaml"))
@@ -81,8 +83,9 @@ class Registry(object):
 
   def get(self, resource_id):
     """
-    <public> Returns an instance of the specified resource class. Raises
-    ``ImportError`` when failing to import a resource.
+    <public> Returns an instance of the specified resource class. Dodges an
+    ``ImportError`` when failing to import a resource and returns ``None``
+    instead.
 
     .. code-block:: python
 
@@ -93,8 +96,77 @@ class Registry(object):
     :param str resource_id: The resource key (name of module)
     :returns: A class instance of the resource
     """
-    return load_class("cosmid.resources.{}.Resource".format(resource_id))()
+    options = self.ls()
+
+    if resource_id not in options:
+      # Try to fuzzy match the request against the options
+      resource_id = self.matchOne(resource_id, options)
+
+    if resource_id:
+      return load_class("cosmid.resources.{}.Resource".format(resource_id))()
+
+    else:
+      return None
+
+  def grab(self, resource_id, target):
+    """
+    <public> Returns all that's nessesary to download a specific resource.
+    The method will try to correct both ``resource_id`` and the ``target``
+    release tag.
+
+    :param str resource_id: What resource to download
+    :param str target: What release of the resource to download
+    """
+    # Either import resource class or print warning and move on.
+    resource = self.get(resource_id)
+
+    if resource is None:
+      message = "Couldn't match '{}'".format(resource_id)
+      self.messenger.send("warning", message)
+
+      return None, None, None
     
+    # Now let's figure out the version
+    # No specified version will match to the latest resource release
+    if target == "latest":
+      version = resource.latest()
+    else:
+      options = resource.versions()
+      version = self.matchOne(target, options)
+
+    if resource is None:
+      message = ("Couldn't match version '{v}' to '{id}'. Choose: {vers}."
+                 .format(v=target, id=resource.id,
+                         vers=", ".join(options)))
+
+      self.messenger.send("warning", message)
+
+      return None, None, None
+
+    # Get the goahead! (we haven't already downloaded it)
+    if self.goahead(resource, version):
+
+      # Finally we can determine the paths to download and save the files
+      dl_paths = resource.paths(version)
+      save_paths = ["{dest}/{filename}".format(dest=self.dest, filename=name)
+                    for name in resource.names]
+
+      # Add the resource to the history file as downloaded
+      self.history.add(resource_id, {
+        "version": version,
+        "target": target,
+        "names": resource.names,
+        "sources": save_paths
+      })
+
+      return resource, dl_paths, save_paths
+
+    else:
+
+      # The resource was already downloaded
+      return None, None, None
+
+
   def ls(self):
     """
     <public> Returns a list of resource IDs and docstrings for all the
@@ -181,44 +253,19 @@ class Registry(object):
     else:
       return None
 
-  def goahead(self, resource, target):
+  def goahead(self, resource, version):
     """
     Determines whether it's any idea in going ahead with a download.
     """
     # Get any currently downloaded resources
     current = self.history.find(resource.id, default={})
 
-    # Get the best matching version
-    best_match = self.matchOne(target, resource.versions())
-
     # Make sure we haven't already download the resource
-    if best_match == target:
+    if version == current.get("version"):
       message = "Resource already downloaded: '{id}'.".format(id=resource.id)
       self.messenger.send("update", message)
 
       return False
 
-    else:
-      # Make sure the requested version is valid
-      if not best_match:
-
-        message = ("Non-matching key: '{key}'. Choose one of {vers}."
-                   .format(key=resource.id, vers=", ".join(valid_versions)))
-
-        self.messenger.send("error", message)
-
-        return False
-
-    # Inform the user what resource version was resolved
-    message = ("'{id}#{target}' resolved to '{id}#{v}'."
-               .format(id=resource.id, target=target, v=best_match))
-    self.messenger.send("note", message)
-
     return True
 
-
-# # Path to actual save location for the resource
-# resource_dest = path("{dest}/{key}".format(dest=dest, key=resource_id))
-# if not resource_dest.exists():
-#   # Create it!
-#   resource_dest.mkdir()

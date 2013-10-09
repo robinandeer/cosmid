@@ -54,7 +54,8 @@ class Messenger(object):
     statement = {
       "warning": self.warn(),
       "error": self.error(),
-      "update": self.update() 
+      "update": self.update(),
+      "ghost": self.ghost()
     }.get(category, self.note())
 
     # Print the parts with tab-separation

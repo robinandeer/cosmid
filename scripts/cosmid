@@ -19,126 +19,101 @@ from __future__ import print_function
 
 from docopt import docopt
 from path import path
-import sys
 
 import cosmid
-from cosmid.magicmethods import cd, load_class
-from cosmid.yaml import DefaultReader
-from cosmid.messenger import Messenger
 from cosmid.core import Registry
 
 
 def main(args):
   # Always initiate the registry!
-  # 1. Config, 2. Project file, 3. History file
-  hub = Registry(dry=args["--dry"], quiet=args["--quiet"])
+  hub = Registry()
 
   # -------------------------------------------------------
   #  Configuring Cosmid for this project
   # -------------------------------------------------------
-  # Change current working dir (or '.')
-  with cd(hub.config.cwd):
+  if args["search"]:
+    # Search the registry using the query
+    options = hub.search(args["<query>"])
 
-    if args["search"]:
-      # Search the registry using the query
-      options = hub.search(args["<query>"])
+    # Just to make sure we print something (feedback)
+    print("Search results:\n")
 
-      # Just to make sure we print something (feedback)
-      print("Search results:\n")
+    # Print each of the matches (top 5) to the console as updates
+    for option in options:
+      hub.messenger.send("note", option[0])
 
-      # Print each of the matches (top 5) to the console as updates
-      for option in options:
-        hub.messenger.send("note", option[0])
+  else:
+    # -------------------------------------------------------
+    #  Clone some resources!
+    #  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #  N.B. Updating specific resources without version will
+    #  replace existing releases with the latest version.
+    # -------------------------------------------------------
+    # Download resources specified from CLI
+    if args["<resource_id>"]:
+      resources = {}
+      for resource_id in args["<resource_id>"]:
+        # I add an extra ``None`` to be able to replace it with "*" for
+        # entries without version #-tags that will be only 1-item lists.
+        parts = resource_id.split("#") + [None]
+        resources[parts[0]] = parts[1] or "latest"
+
+    elif args["update"]:
+      # Add 'updateable' resources from history-file
+      resources = hub.history.updateable()
 
     else:
+      # Download all resources listed in "cosmid.yaml"
+      resources = hub.project.find()
 
-      # Create a new destination folder if needed
-      if not (dest.exists() and args["--dry"]):
+    # -------------------------------------------------------
+    #  Download each of the resources
+    # -------------------------------------------------------
+    for resource_id, target in resources.iteritems():
 
-        if dest.isfile():
-          message = "Save directory is a file: '{}'".format(dest)
-          hub.messenger.send(message, "error")
-          sys.exit()
+      # Path to actual save location for the resource
+      if not hub.dest.exists():
+        # Create it!
+        hub.dest.mkdir()
 
-        else:
-          # Initiate a new directory
-          hub.dest.mkdir()
+      resource, dl_paths, save_paths = hub.grab(resource_id, target)
 
-      # -------------------------------------------------------
-      #  Decide which resources to download
-      #  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      #  N.B. Updating specific resources without version will
-      #  replace existing releases with the latest version.
-      # -------------------------------------------------------
-      # Download resources specified from CLI
-      if args["<resource_id>"]:
-        resources = {}
-        for resource_id in args["<resource_id>"]:
-          # I add an extra ``None`` to be able to replace it with "*" for
-          # entries without version #-tags that will be only 1-item lists.
-          parts = resource_id.split("#") + [None]
-          resources[parts[0]] = parts[1] or "latest"
+      if resource is None:
+        # Something didn't add up... the user has been notified.
+        continue
 
       else:
-        if args["update"]:
-          # Add 'updateable' resources from the history-file
-          resources = hub.history.updateable()
-        else:
-          # Download all resources listed in "cosmid.yaml"
-          resources = hub.project.find()
+        # Path to actual save location for the resource
+        folder = path("{dest}/{id}".format(dest=hub.dest, key=resource.id))
+        if not folder.exists():
+          # Create it!
+          folder.mkdir()
 
-      # -------------------------------------------------------
-      #  Download each of the resources
-      # -------------------------------------------------------
-      for resource_id, target in resources.iteritems():
+        # Download each file belonging to the resource
+        for dl_path, save_path in zip(dl_paths, save_paths):
+          if args["--dry"]:
+            message = "Cloning: '{0}' to '{1}'".format(dl_path, save_path)
+            hub.messenger.send("ghost", message)
 
-        # Either import the resource class or print warning and move on.
-        try:
-          resource = hub.get(resource_id)
-        except ImportError:
-          message = "Can't find '{}'".format(resource_id)
-          hub.messenger.send("warning", message)
-          continue
+          else:
+            # Prepare the user for what is going to happen
+            fileSize = resource.ftp.fileSize(dl_path)
+            message = ("Downloading: {path} - {size} MB"
+                       .format(path=save_path, size=fileSize))
 
-        # No specified version will match to the latest resource release
-        if target == "latest":
-          version = resource.latest()
-        else:
-          version = target
+            hub.messenger.send("update", message)
 
-        if hub.goahead(resource, version) or not args["--force"]:
-
-          # Download each file belonging to the resource
-          for dl, name in zip(resource.paths(version), resource.names):
-            savePath = "{dest}/{name}".format(dest=resource_dest, name=name)
-
-            if args["--dry"]:
-              print("Not downloading: {0} to {1}".format(dl, savePath))
-
-            else:
-              # Prepare the user for what is going to happen
-              fileSize = resource.ftp.fileSize(dl)
-              print("Downloading: {path} - {size} MB"
-                    .format(path=savePath, size=fileSize))
-
-              # Commit to the download!
-              resource.ftp.commit(dl, savePath)
-
-              history.add(resource_id, {
-                "version": version,
-                "target": target,
-                "name": name,
-                "source": dl
-              })
+            # Commit to the download!
+            resource.ftp.commit(dl_path, save_path)
 
         if args["--save"] or args["update"]:
           # Add the user supplied data to the project YAML file
-          project.add(resource_id, target)
+          hub.project.add(resource_id, target)
 
+    if not args["--dry"]:
       # Save over the old "cosmid.yaml" file
-      project.save()
-      history.save()
-
+      hub.project.save()
+      hub.history.save()
 
 if __name__ == "__main__":
     args = docopt(__doc__, version="cosmid {v}".format(v=cosmid.__version__))
