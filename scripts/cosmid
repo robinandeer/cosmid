@@ -3,22 +3,26 @@
 """Cosmid CLI
 
 Usage:
-  cosmid clone [<resource_id>...] [--wait=<sec>] [--force] [--save] [--dry] [--quiet]
+  cosmid clone [<resource_id>...] [--save] [--dry]
   cosmid update [<resource_id>...]
   cosmid search <query>
   cosmid (-h | --help)
   cosmid --version
 
 Commands:
-  clone            Download a new resource(s) locally
-  update           Update local resources to the latest version
-  search           Search among the available resources
+  clone               Download a new resource(s) locally
+  update              Update local resources to the latest version
+  search              Search among the available resources
+
+Arguments:
+  <resource_id>       List of resource IDs to clone or update
+  <query>             Search term for matching against available resources
 
 Options:
-  -h --help        Show this screen.
-  --version        Show version.
-  -f --force       Overwrite existing files
-  -w --wait=<sec>  How long to wait if the download is already started
+  -h --help           Show this screen
+  -v --version        Show version
+  -s --save           Add the successfully cloned resources to 'cosmid.yaml'
+  -d --dry            Run in dry-mode keeping status quo
 """
 from __future__ import print_function
 
@@ -42,7 +46,7 @@ def main(args):
     options = hub.search(args["<query>"])
 
     # Just to make sure we print something (feedback)
-    print("Search results:\n")
+    print("\nSearch results:\n")
 
     # Print each of the matches (top 5) to the console as updates
     for option in options:
