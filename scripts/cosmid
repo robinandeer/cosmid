@@ -9,6 +9,11 @@ Usage:
   cosmid (-h | --help)
   cosmid --version
 
+Commands:
+  clone            Download a new resource(s) locally
+  update           Update local resources to the latest version
+  search           Search among the available resources
+
 Options:
   -h --help        Show this screen.
   --version        Show version.
@@ -17,6 +22,7 @@ Options:
 """
 from __future__ import print_function
 
+import sys
 from docopt import docopt
 from path import path
 
@@ -49,6 +55,17 @@ def main(args):
     #  N.B. Updating specific resources without version will
     #  replace existing releases with the latest version.
     # -------------------------------------------------------
+    # We at least want to warn about not finding the project file
+    if not hub.project_path.exists():
+      message = "Can't find '{}'.".format(hub.project_path)
+
+      if args["--save"]:
+        message_type = "error"
+      else:
+        message_type = "warning"
+
+      hub.messenger.send(message_type, message)
+
     # Download resources specified from CLI
     if args["<resource_id>"]:
       resources = {}
@@ -59,6 +76,12 @@ def main(args):
         resources[parts[0]] = parts[1] or "latest"
 
     elif args["update"]:
+      # We require the history file
+      if not hub.history_path.exists():
+        message = "Can't find any cloned any resources."
+        hub.messenger.send("error", message)
+        sys.exit()
+
       # Add 'updateable' resources from history-file
       resources = hub.history.updateable()
 
@@ -84,8 +107,8 @@ def main(args):
 
       else:
         # Path to actual save location for the resource
-        folder = path("{dest}/{id}".format(dest=hub.dest, key=resource.id))
-        if not folder.exists():
+        folder = path("{dest}/{id}".format(dest=hub.dest, id=resource.id))
+        if not folder.exists() and not args["--dry"]:
           # Create it!
           folder.mkdir()
 

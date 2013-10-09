@@ -60,23 +60,23 @@ class Registry(object):
   def __init__(self):
     super(Registry, self).__init__()
 
-    try:
-      # Set up YAML parser for optional config file
-      self.config = DefaultReader(".cosmidrc")
-    except ImportError:
-      self.config = DefaultReader()
+    # Set up YAML parser for optional config file
+    self.config = DefaultReader(".cosmidrc")
 
     # Extract stuff from config
     self.email = self.config.find("email")
     self.cwd = self.config.find("cwd", default=".")
-    self.dest = path("{base}/{folder}"
-                     .format(base=self.cwd, folder=self.config.find("dest")))
+
+    folder = self.config.find("dest", default="databases")
+    self.dest = path("{base}/{folder}".format(base=self.cwd, folder=folder))
 
     # The cosmid file is assciated with the resources rather than the 'project'
-    self.project = DefaultReader(self.cwd + "/cosmid.yaml")
+    self.project_path = path(self.cwd + "/cosmid.yaml")
+    self.project = DefaultReader(self.project_path)
 
     # Load history file consisting of already downloaded resources
-    self.history = HistoryReader(path(self.dest + "/.cosmid.yaml"))
+    self.history_path = path(self.dest + "/.cosmid.yaml")
+    self.history = HistoryReader(self.history_path)
 
     # Set up a :class:`cosmid.messenger.Messenger`
     self.messenger = Messenger("cosmid")
@@ -96,16 +96,10 @@ class Registry(object):
     :param str resource_id: The resource key (name of module)
     :returns: A class instance of the resource
     """
-    options = self.ls()
-
-    if resource_id not in options:
-      # Try to fuzzy match the request against the options
-      resource_id = self.matchOne(resource_id, options)
-
-    if resource_id:
+    try:
       return load_class("cosmid.resources.{}.Resource".format(resource_id))()
 
-    else:
+    except ImportError:
       return None
 
   def grab(self, resource_id, target):
@@ -148,7 +142,8 @@ class Registry(object):
 
       # Finally we can determine the paths to download and save the files
       dl_paths = resource.paths(version)
-      save_paths = ["{dest}/{filename}".format(dest=self.dest, filename=name)
+      save_paths = [("{dest}/{id}/{filename}"
+                     .format(dest=self.dest, id=resource.id, filename=name))
                     for name in resource.names]
 
       # Add the resource to the history file as downloaded
@@ -156,7 +151,7 @@ class Registry(object):
         "version": version,
         "target": target,
         "names": resource.names,
-        "sources": save_paths
+        "sources": dl_paths
       })
 
       return resource, dl_paths, save_paths
@@ -192,10 +187,10 @@ class Registry(object):
     # Loop over all resource modules
     for importer, modname, ispkg in modules:
       # Load the `Resource` class for the module
-      module = load_class(modname)
+      module = self.get(modname)
 
       # Save name and docstring
-      items.append((modname, module.__doc__))
+      items.append((modname.split(".")[-1], module.__doc__))
 
     return items
 

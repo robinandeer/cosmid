@@ -17,7 +17,10 @@ config = {
         "nose",
         "ftputil",
         "docopt",
-        "path.py"
+        "path.py",
+        "pyyaml",
+        "fuzzywuzzy",
+        "termcolor"
     ],
     "packages": [
         "cosmid",

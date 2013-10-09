@@ -40,16 +40,17 @@ class DefaultReader(object):
     :returns: self
     """
     if yaml_path:
-      self.path = path(yaml_path)
+      self.source = path(yaml_path)
 
-    if self.path.isfile():
-      with open(self.path, "r") as handle:
+    if self.source.isfile():
+      with open(self.source, "r") as handle:
         # Use safe load to protect from accidentally running malicious
         # functions defined in the YAML file. Limit to simple str/int values.
-        self.items = yaml.safe_load(handle.read()) or {}
+        self.items = yaml.safe_load(handle.read())
 
     else:
-      raise IOError("No such file found: " + self.path)
+      # Initialize empty 
+      self.items = {}
 
     return self
 
@@ -78,7 +79,7 @@ class DefaultReader(object):
 
     :returns: self
     """
-    with open(self.path, "w") as handle:
+    with open(self.source, "w") as handle:
       handle.write(yaml.safe_dump(self.items, default_flow_style=False))
 
     return self
