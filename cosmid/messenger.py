@@ -17,13 +17,16 @@ class Messenger(object):
     # Who is sending the message?
     self.sender = sender
 
-  def welcome(self):
+  def welcome(self, version):
     """
     <public> Prints a colored welcome messages (ascii art).
 
+    :param str version: A semver version sans leading 'v'.
     :returns: self
     """
-    raw = """
+    v = "=================| version {} |================".format(version)
+
+    ascii = """
      .o88b.  .d88b.  .d8888. .88b  d88. d888888b d8888b. 
     d8P  Y8 .8P  Y8. 88'  YP 88'YbdP`88   `88'   88  `8D 
     8P      88    88 `8bo.   88  88  88    88    88   88 
@@ -32,11 +35,10 @@ class Messenger(object):
      `Y88P'  `Y88P'  `8888Y' YP  YP  YP Y888888P Y8888D' 
 
      {}
-    """.format(colored("=================| version 0.2 |=================",
-                       "white"))
+    """.format(colored(v, "white"))
 
     # Print to the console
-    print(colored(raw, "cyan"))
+    print(colored(ascii, "cyan"))
 
     return self
 
