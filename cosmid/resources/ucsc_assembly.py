@@ -20,8 +20,10 @@ class Resource(BaseResource):
 
   def versions(self):
     # Only one release
+    # Skip releases like "hg15june2000" (if)
     return [dirName for dirName in
-            self.ftp.listFiles(self.baseUrl, "hg[1-9]*")]
+            self.ftp.listFiles(self.baseUrl, "hg[1-9]*")
+            if not len(dirName) > 4]
 
   def latest(self):
     number = max([int(v.replace("hg", "")) for v in self.versions()])
@@ -33,13 +35,12 @@ class Resource(BaseResource):
   def paths(self, version):
     base = "{base}/{v}/bigZips".format(base=self.baseUrl, v=version)
 
-    # If the version if new than 'hg18' it will be a '.tar.gz' file
+    # If the version is newer than 'hg18' it will be a '.tar.gz' file
     if self.newer("hg18", version):
+      return ["{base}/chromFa.tar.gz".format(base=self.baseUrl)]
+
+    else:
       return ["{base}/chromFa.zip".format(base=base)]
 
       # This will be fixed in the future but for now...
-      print("N.B. Please rename the downloaded file to '.zip'"
-            "before extracting!")
-
-    else:
-      return ["{base}/chromFa.tar.gz".format(base=self.baseUrl)]
+      print("N.B. Rename 'chromFa.tar.gz' to '.zip' before extracting!")

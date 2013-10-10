@@ -33,6 +33,6 @@ class Resource(BaseResource):
   def paths(self, version):
     # 1 file
     base = "pub/release-{}/fasta/homo_sapiens/dna".format(version)
-    files = self.ftp.listFiles(base, ".*.dna.primary_assembly.fa.gz")
+    files = self.ftp.listFiles(base, "*.dna.primary_assembly.fa.gz")
 
     return ["{base}/{file}".format(base=base, file=files[0])]

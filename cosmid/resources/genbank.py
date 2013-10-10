@@ -24,14 +24,15 @@ class Resource(BaseResource):
 
   def latest(self):
     # Extract assembly and path number
-    versions = [(int(v[3:5]), int(v[8:] or 0)) for v in self.versions()]
+    versions = [(int(v[4:6]), int(v[8:] or 0)) for v in self.versions()]
 
     # Sort based on assembly and patch => return the last item
-    return sorted(versions, key=lambda x: (x[0], x[1]))[-1]
+    combo = sorted(versions, key=lambda x: (x[0], x[1]))[-1]
+    return "GRCh{v}.p{patch}".format(v=combo[0], patch=combo[1])
 
   def newer(self, current, challenger):
     # Extract assembly and path number
-    combos = [(int(v[3:5]), int(v[8:] or 0)) for v in (current, challenger)]
+    combos = [(int(v[4:6]), int(v[8:] or 0)) for v in (current, challenger)]
 
     # If the assemblies differ
     if combos[0][0] != combos[1][0]:

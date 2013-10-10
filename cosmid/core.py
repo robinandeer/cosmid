@@ -124,7 +124,7 @@ class Registry(object):
       version = self.matchOne(target, options)
 
     if version is None:
-      message = ("Couldn't match version '{v}' to '{id}'; options: {vers}"
+      message = ("Couldn't match version '{id}#{v}'; {vers}"
                  .format(v=target, id=resource.id, vers=", ".join(options)))
 
       self.messenger.send("warning", message)
