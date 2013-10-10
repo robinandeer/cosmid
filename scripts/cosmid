@@ -3,143 +3,183 @@
 """Cosmid CLI
 
 Usage:
-  cosmid clone [--wait=<sec>] [--forced] [--dry]
-  cosmid clone <db_key> [--wait=<sec>] [--forced] [--save] [--dry]
+  cosmid clone [<resource_id>...] [--save] [--dry]
+  cosmid update [<resource_id>...]
+  cosmid search <query>
+  cosmid init
   cosmid (-h | --help)
   cosmid --version
 
+Commands:
+  clone               Download a new resource(s) locally
+  update              Update local resources to the latest version
+  search              Search among the available resources
+  init                Walk through setting up a basic project config file
+
+Arguments:
+  <resource_id>       List of resource IDs to clone or update
+  <query>             Search term for matching against available resources
+
 Options:
-  -h --help          Show this screen.
-  --version          Show version.
-  -f --force         Overwrite existing files
-  -w --wait=<sec>    How long to wait if the download is already started
+  -h --help           Show this screen
+  -v --version        Show version
+  -s --save           Add the successfully cloned resources to 'cosmid.yaml'
+  -d --dry            Run in dry-mode keeping status quo
 """
 from __future__ import print_function
-from docopt import docopt
-import yaml
-from path import path
-import os
+
 import sys
-cosmidPath = os.path.abspath("../cosmid")
-sys.path.insert(0, cosmidPath)
+from docopt import docopt
+from path import path
+
 import cosmid
-from cosmid.core import DB, File, FTP
-from cosmid.magicmethods import cd
+from cosmid.core import Registry
+from termcolor import colored
 
 
 def main(args):
+  # -------------------------------------------------------
+  #  Search among the available resources
+  # -------------------------------------------------------
+  if args["search"]:
+    # Search the registry using the query
+    options = hub.search(args["<query>"])
 
-    # First issue is to look for local ".cosmidrc"
-    # Load possible `.cosmidrc` file with options
-    if path(".cosmidrc").exists():
-      with open(".cosmidrc", "r") as handle:
-        config = yaml.load(handle.read())
+    # Just to make sure we print something (feedback)
+    print("\nSearch results:\n")
 
-    else:
-      config = {}
+    # Print each of the matches (top 5) to the console as updates
+    for option in options:
+      hub.messenger.send("note", option[0])
 
-    # Change current working dir if specified, otherwise stick to the current
-    # by default.
-    with cd(config.get("cwd", ".")):
+  elif args["init"]:
+    # Help out with initializing a new project
+    # Start by printing a nice welcome message!
+    print(hub.messenger.welcome(cosmid.__version__))
 
-      # Load in the servers
-      # TODO: How can this file be distributed?
-      with open("data/servers.yaml", "r") as handle:
-        servers = yaml.load(handle.read())
+    q = "[{}]".format(colored("?", "green"))
 
-      # Load in the registry: this is used to crosscheck db_key with server
-      # TODO: Perhaps crosscheck version of database with option?
-      with open("data/registry.yaml", "r") as handle:
-        registry = yaml.load(handle.read())
+    # Get user email for logging in to some FTP servers
+    promt = q + colored(" Email adress (FTP login): ".format(q), "cyan")
+    email = raw_input(promt)
+    if email:
+      hub.config.add("email", email)
 
-      # Extract the values if there are any (else set default)
-      dest = path(config.get("dest", "databases"))
-      maxWait = args.get("--wait", config.get("maxWait", 0))
+    # Decide where to store cloned resources
+    promt = q + colored(" Resource directory: (resources) ".format(q), "cyan")
+    hub.config.add("directory", raw_input(promt) or "resources")
 
-      # Create a new destination folder if needed
-      if not dest.exists() and not args["--dry"]:
-        if dest.isfile():
-          sys.exit("Your save directory ({dest}) has to be a valid folder!"
-                   .format(dest=dest))
-        else:
-          # Iniate a new directory
-          dest.mkdir()
+    # Suggest adding a sample resource
+    promt = q + colored(" Add an example resource?: (y/N) ".format(q), "cyan")
+    if raw_input(promt).lower() in ["y", "yes"]:
+      hub.config.addResource("example", 2.5)
 
-      # Open the local cosmid.yaml file and download all included databases
-      cosmidFile = path("cosmid.yaml")
-      if cosmidFile.exists():
-        with open(cosmidFile, "r") as handle:
-          data = yaml.load(handle.read())
-      else:
-        # If the user hasn't provided a db from command line
-        if not args["<db_key>"]:
-          sys.exit("'cosmid.yaml' not detected; run 'cosmid init'")
+    # Save/Create the config file
+    hub.config.save()
 
-        data = {}
+    # Just need some separation
+    print()
 
-      if not args["<db_key>"]:
-        # Loop over each database reference
-        # This only supports download the latest version for now
-        dbs = [db_key for db_key in data]
+    # Print an update that everything is done!
+    hub.messenger.send("update", "Done! Now run: 'cosmid clone'")
 
-      else:
-        # TODO: Enable multiple downloads from commandline
-        # TODO: Overwrite YAML file to include new databases if "--save"
-        dbs = [args["<db_key>"]]
-
-      # TODO: Multithreading/processing
-      for db_key in dbs:
-        # Setup DB object from the registry
-        db = DB(**registry[db_key])
-
-        # Check if the file already exists
-        if (dest + "/" + db.dbName).exists():
-          # Move to next file
-          continue
-
-        server = servers.get(db.server.lower())
-        url = server["url"]
-        username = server["username"]
-        # Get email from config or set password to empty string
-        password = config.get(server["password"], "")
-
-        # Initiate FTP server connection
-        ftp = FTP(url, username, password)
-
-        for f in ftp.listFiles(db.dirPath, db.pattern):
-          # Set what file to download and whether to force overwrites
-          fullPath = "{dir}/{file}".format(dir=db.dirPath, file=f)
-
-          if args["--dry"]:
-            print("Not downloading: {0} to {1}"
-                  .format(fullPath, "{0}/{1}".format(dest, db.dbName)))
-
-          else:
-            print("Downloading: {}".format("{0}/{1}".format(dest, db.dbName)))
-            fileSize = ftp.fileSize(fullPath)
-            print("Size: {} MB".format(fileSize))
-            ftp.commit(fullPath, "{0}/{1}".format(dest, db.dbName))
+  else:
+    # -------------------------------------------------------
+    #  Clone some resources!
+    #  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #  N.B. Updating specific resources without version will
+    #  replace existing releases with the latest version.
+    # -------------------------------------------------------
+    # We at least want to warn about not finding the project file
+    if not hub.config_path.exists():
+      message = "Couldn't find '{}'; run 'cosmid init'".format(hub.config_path)
 
       if args["--save"]:
+        message_type = "error"
+        sys.exit()
 
-        # Just support latest version for now
-        data[args["<db_key>"]] = "latest"
+      else:
+        message_type = "warning"
 
-        # Update YAML file (overwrite)
-        with open("cosmid.yaml", "w") as handle:
-          handle.write(yaml.dump(data, default_flow_style=False))
+      hub.messenger.send(message_type, message)
 
-      print("All databases downloaded to: '{}'".format(dest))
+    # Download resources specified from CLI
+    if args["<resource_id>"]:
+      resources = {}
+      for resource_id in args["<resource_id>"]:
+        # I add an extra ``None`` to be able to replace it with "*" for
+        # entries without version #-tags that will be only 1-item lists.
+        parts = resource_id.split("#") + [None]
+        resources[parts[0]] = parts[1] or "latest"
+
+    elif args["update"]:
+      # We require the history file
+      if not hub.history_path.exists():
+        message = "Couldn't find any cloned resources"
+        hub.messenger.send("error", message)
+        sys.exit()
+
+      # Add 'updateable' resources from history-file
+      resources = hub.history.updateable()
+
+    else:
+      # Fetch all resources listed in "cosmid.yaml"
+      resources = hub.config.find("resources", {})
+
+    # -------------------------------------------------------
+    #  Download each of the resources
+    # -------------------------------------------------------
+    for resource_id, target in resources.iteritems():
+
+      resource, dl_paths, save_paths = hub.grab(resource_id, target)
+
+      if resource is None:
+        # Something didn't add up... the user has been notified.
+        continue
+
+      else:
+        # Path to actual save location for the resource
+        if not hub.directory.exists():
+          # Create it!
+          hub.directory.mkdir()
+
+        # Path to actual save location for the resource
+        folder = path("{dest}/{id}".format(dest=hub.directory, id=resource.id))
+        if not folder.exists() and not args["--dry"]:
+          # Create it!
+          folder.mkdir()
+
+        # Download each file belonging to the resource
+        for dl_path, save_path in zip(dl_paths, save_paths):
+
+          # Prepare the user for what is going to happen
+          fileSize = resource.ftp.fileSize(dl_path)
+          message = ("Cloning: {path} - {size} MB"
+                     .format(path=save_path, size=fileSize))
+
+          if args["--dry"]:
+            hub.messenger.send("ghost", message)
+
+          else:
+            hub.messenger.send("update", message)
+
+            # Commit to the download!
+            resource.ftp.commit(dl_path, save_path)
+
+        if args["--save"] or args["update"]:
+          # Add the user supplied data to the project YAML file
+          hub.config.addResource(resource_id, target)
+
+      # Save the config files for every resource
+      if not args["--dry"]:
+        # Save over the old "cosmid.yaml" file
+        hub.config.save()
+        hub.history.save()
 
 
 if __name__ == "__main__":
-    args = docopt(__doc__, version="cosmid {v}".format(v=cosmid.__version__))
+    # Always initiate the registry!
+    hub = Registry()
+
+    args = docopt(__doc__, version=hub.messenger.welcome(cosmid.__version__))
     main(args)
-
-# # Bash
-# for chrm in "chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18" "chr19" "chr20" "chr21" "chr22" "chrX" "chrY"
-# do
-#   gzip -d "$chrm.fa.gz"
-# done
-
-# cat chr*.fa > Homo_sapiens.GRCh37.dna.concat.fa
