@@ -110,7 +110,7 @@ class Registry(object):
     resource = self.get(resource_id)
 
     if resource is None:
-      message = "Couldn't match '{}'".format(resource_id)
+      message = "Couldn't match resource ID: '{}'".format(resource_id)
       self.messenger.send("warning", message)
 
       return None, None, None
@@ -124,7 +124,7 @@ class Registry(object):
       version = self.matchOne(target, options)
 
     if resource is None:
-      message = ("Couldn't match version '{v}' to '{id}'. Choose: {vers}."
+      message = ("Couldn't match version '{v}' to '{id}'; options: {vers}"
                  .format(v=target, id=resource.id, vers=", ".join(options)))
 
       self.messenger.send("warning", message)
@@ -251,7 +251,7 @@ class Registry(object):
 
     # Make sure we haven't already download the resource
     if version == current.get("version"):
-      message = "Resource already downloaded: '{id}'.".format(id=resource.id)
+      message = "Resource already downloaded: '{id}'".format(id=resource.id)
       self.messenger.send("update", message)
 
       return False

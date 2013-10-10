@@ -77,8 +77,11 @@ def main(args):
     # Save/Create the config file
     hub.config.save()
 
+    # Just need some separation
+    print()
+
     # Print an update that everything is done!
-    hub.messenger.send("update", "\nDone! Now run: 'cosmid clone'.")
+    hub.messenger.send("update", "Done! Now run: 'cosmid clone'")
 
   else:
     # -------------------------------------------------------
@@ -89,10 +92,12 @@ def main(args):
     # -------------------------------------------------------
     # We at least want to warn about not finding the project file
     if not hub.config_path.exists():
-      message = "Can't find '{}'.".format(hub.config_path)
+      message = "Couldn't find '{}'; run 'cosmid init'".format(hub.config_path)
 
       if args["--save"]:
         message_type = "error"
+        sys.exit()
+
       else:
         message_type = "warning"
 
@@ -110,7 +115,7 @@ def main(args):
     elif args["update"]:
       # We require the history file
       if not hub.history_path.exists():
-        message = "Can't find any cloned any resources."
+        message = "Couldn't find any cloned resources"
         hub.messenger.send("error", message)
         sys.exit()
 
@@ -126,11 +131,6 @@ def main(args):
     # -------------------------------------------------------
     for resource_id, target in resources.iteritems():
 
-      # Path to actual save location for the resource
-      if not hub.directory.exists():
-        # Create it!
-        hub.directory.mkdir()
-
       resource, dl_paths, save_paths = hub.grab(resource_id, target)
 
       if resource is None:
@@ -138,6 +138,11 @@ def main(args):
         continue
 
       else:
+        # Path to actual save location for the resource
+        if not hub.directory.exists():
+          # Create it!
+          hub.directory.mkdir()
+
         # Path to actual save location for the resource
         folder = path("{dest}/{id}".format(dest=hub.directory, id=resource.id))
         if not folder.exists() and not args["--dry"]:
@@ -165,10 +170,11 @@ def main(args):
           # Add the user supplied data to the project YAML file
           hub.config.addResource(resource_id, target)
 
-    if not args["--dry"]:
-      # Save over the old "cosmid.yaml" file
-      hub.config.save()
-      hub.history.save()
+      # Save the config files for every resource
+      if not args["--dry"]:
+        # Save over the old "cosmid.yaml" file
+        hub.config.save()
+        hub.history.save()
 
 
 if __name__ == "__main__":
