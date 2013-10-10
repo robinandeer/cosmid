@@ -20,6 +20,6 @@ class Resource(iResource):
   def paths(self, version):
     # 1 file
     base = "{base}/{v}/b37".format(base=self.baseUrl, v=version)
-    f = "dbsnp_137.excluding_sites_after_129.vcf.gz"
+    f = "dbsnp_137.b37.excluding_sites_after_129.vcf.gz"
 
     return ["{base}/{file}".format(base=base, file=f)]

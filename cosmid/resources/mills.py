@@ -20,6 +20,6 @@ class Resource(iResource):
   def paths(self, version):
     # 1 file
     base = "{base}/{v}/b37".format(base=self.baseUrl, v=version)
-    f = "Mills_and_1000G_gold_standard.indels.{}.vcf.gz".format(version)
+    f = "Mills_and_1000G_gold_standard.indels.b37.vcf.gz".format(version)
 
     return ["{base}/{file}".format(base=base, file=f)]
