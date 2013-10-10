@@ -19,10 +19,10 @@ class Messenger(object):
 
   def welcome(self, version):
     """
-    <public> Prints a colored welcome messages (ascii art).
+    <public> Returns a colored welcome messages (ascii art) ready to print.
 
     :param str version: A semver version sans leading 'v'.
-    :returns: self
+    :returns: The colored welcome message
     """
     v = "=================| version {} |================".format(version)
 
@@ -37,10 +37,7 @@ class Messenger(object):
      {}
     """.format(colored(v, "white"))
 
-    # Print to the console
-    print(colored(ascii, "cyan"))
-
-    return self
+    return colored(ascii, "cyan")
 
   def send(self, category, message):
     """

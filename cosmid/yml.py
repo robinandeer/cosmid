@@ -132,3 +132,54 @@ class HistoryReader(DefaultReader):
     # If force is selected we include all resources
     return {key:item["target"] for key, item in self.items.iteritems()
             if item["target"] != item["version"] or force}
+
+
+class ConfigReader(DefaultReader):
+  """
+  A specialized YAML reader for dealing with Cosmid History files. Inherits
+  from ``DefaultReader``.
+
+  :param str yaml_path: Path to the cosmid history file (.cosmid.yaml)
+  """
+  def __init__(self, yaml_path):
+    super(ConfigReader, self).__init__(yaml_path)
+
+  def addResource(self, resource_id, v_target="latest"):
+    """
+    <public> Adds a resources and version target to the config file.
+
+    :param str resource_id: A valid resource ID
+    :param str v_target: (optional) A version target to for the resource
+    :returns: self
+    """
+    resources = self.find("resources", default=None)
+
+    if resources is None:
+      # Add the "resources" key first
+      self.add("resources", {})
+
+      # Recursively call the function
+      self.addResource(resource_id, v_target)
+
+    else:
+      # We're good to go!
+      resources[resource_id] = v_target
+
+    return self
+
+  def getResource(self, resource_id, default=None):
+    """
+    <public> Fetches a resource from the config file or returns `default`.
+
+    :param str resource_id: A valid resource ID
+    :param object default: (optional) What to return unless the ID matches
+    :returns: A dict with a `resource_id`/`target` pair
+    """
+    resources = self.find("resources", default=None)
+
+    if resources is None:
+      return default
+
+    else:
+      return resources.get(resource_id, default)
+

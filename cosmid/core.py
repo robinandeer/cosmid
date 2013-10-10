@@ -5,12 +5,11 @@ import ftputil
 import fnmatch
 import pkgutil
 from path import path
-
 from fuzzywuzzy import process
 
 import resources
 from magicmethods import load_class
-from yml import DefaultReader, HistoryReader
+from yml import ConfigReader, HistoryReader
 from messenger import Messenger
 
 
@@ -61,21 +60,17 @@ class Registry(object):
     super(Registry, self).__init__()
 
     # Set up YAML parser for optional config file
-    self.config = DefaultReader(".cosmidrc")
+    self.config_path = path("cosmid.yaml")
+    self.config = ConfigReader(self.config_path)
 
     # Extract stuff from config
     self.email = self.config.find("email")
-    self.cwd = self.config.find("cwd", default=".")
 
-    folder = self.config.find("dest", default="databases")
-    self.dest = path("{base}/{folder}".format(base=self.cwd, folder=folder))
-
-    # The cosmid file is assciated with the resources rather than the 'project'
-    self.project_path = path(self.cwd + "/cosmid.yaml")
-    self.project = DefaultReader(self.project_path)
+    # Path to resource storage directory
+    self.directory = path(self.config.find("directory", default="resources"))
 
     # Load history file consisting of already downloaded resources
-    self.history_path = path(self.dest + "/.cosmid.yaml")
+    self.history_path = path(self.directory + "/.cosmid.yaml")
     self.history = HistoryReader(self.history_path)
 
     # Set up a :class:`cosmid.messenger.Messenger`
@@ -130,8 +125,7 @@ class Registry(object):
 
     if resource is None:
       message = ("Couldn't match version '{v}' to '{id}'. Choose: {vers}."
-                 .format(v=target, id=resource.id,
-                         vers=", ".join(options)))
+                 .format(v=target, id=resource.id, vers=", ".join(options)))
 
       self.messenger.send("warning", message)
 
@@ -142,8 +136,8 @@ class Registry(object):
 
       # Finally we can determine the paths to download and save the files
       dl_paths = resource.paths(version)
-      save_paths = [("{dest}/{id}/{filename}"
-                     .format(dest=self.dest, id=resource.id, filename=name))
+      save_paths = [("{dir}/{id}/{file}"
+                     .format(dir=self.directory, id=resource.id, file=name))
                     for name in resource.names]
 
       # Add the resource to the history file as downloaded
@@ -240,7 +234,7 @@ class Registry(object):
     :rtype: Python object
     """
     # Match against the options and extract the top match only
-    result, score = process.extractOne(target, options)
+    result, score = process.extractOne(target, map(str, options))
 
     # Arbitrary lower limit for returning a *mathcing* result
     if score >= threshold:

@@ -14,6 +14,7 @@ Commands:
   clone               Download a new resource(s) locally
   update              Update local resources to the latest version
   search              Search among the available resources
+  init                Walk through setting up a basic project config file
 
 Arguments:
   <resource_id>       List of resource IDs to clone or update
@@ -37,9 +38,6 @@ from termcolor import colored
 
 
 def main(args):
-  # Always initiate the registry!
-  hub = Registry()
-
   # -------------------------------------------------------
   #  Search among the available resources
   # -------------------------------------------------------
@@ -57,20 +55,30 @@ def main(args):
   elif args["init"]:
     # Help out with initializing a new project
     # Start by printing a nice welcome message!
-    hub.messenger.welcome(cosmid.__version__)
+    print(hub.messenger.welcome(cosmid.__version__))
 
     q = "[{}]".format(colored("?", "green"))
 
     # Get user email for logging in to some FTP servers
-    promt = colored("{} Your email (FTP login): ".format(q), "cyan")
-    hub.config.add("email", raw_input(promt))
+    promt = q + colored(" Email adress (FTP login): ".format(q), "cyan")
+    email = raw_input(promt)
+    if email:
+      hub.config.add("email", email)
 
     # Decide where to store cloned resources
-    promt = colored("{} Where to store resources: (resources)".format(q),
-                    "cyan")
-    hub.config.add("dest", raw_input(promt))
+    promt = q + colored(" Resource directory: (resources) ".format(q), "cyan")
+    hub.config.add("directory", raw_input(promt) or "resources")
 
+    # Suggest adding a sample resource
+    promt = q + colored(" Add an example resource?: (y/N) ".format(q), "cyan")
+    if raw_input(promt).lower() in ["y", "yes"]:
+      hub.config.addResource("example", 2.5)
+
+    # Save/Create the config file
     hub.config.save()
+
+    # Print an update that everything is done!
+    hub.messenger.send("update", "\nDone! Now run: 'cosmid clone'.")
 
   else:
     # -------------------------------------------------------
@@ -80,8 +88,8 @@ def main(args):
     #  replace existing releases with the latest version.
     # -------------------------------------------------------
     # We at least want to warn about not finding the project file
-    if not hub.project_path.exists():
-      message = "Can't find '{}'.".format(hub.project_path)
+    if not hub.config_path.exists():
+      message = "Can't find '{}'.".format(hub.config_path)
 
       if args["--save"]:
         message_type = "error"
@@ -110,8 +118,8 @@ def main(args):
       resources = hub.history.updateable()
 
     else:
-      # Download all resources listed in "cosmid.yaml"
-      resources = hub.project.find()
+      # Fetch all resources listed in "cosmid.yaml"
+      resources = hub.config.find("resources", {})
 
     # -------------------------------------------------------
     #  Download each of the resources
@@ -119,9 +127,9 @@ def main(args):
     for resource_id, target in resources.iteritems():
 
       # Path to actual save location for the resource
-      if not hub.dest.exists():
+      if not hub.directory.exists():
         # Create it!
-        hub.dest.mkdir()
+        hub.directory.mkdir()
 
       resource, dl_paths, save_paths = hub.grab(resource_id, target)
 
@@ -131,23 +139,23 @@ def main(args):
 
       else:
         # Path to actual save location for the resource
-        folder = path("{dest}/{id}".format(dest=hub.dest, id=resource.id))
+        folder = path("{dest}/{id}".format(dest=hub.directory, id=resource.id))
         if not folder.exists() and not args["--dry"]:
           # Create it!
           folder.mkdir()
 
         # Download each file belonging to the resource
         for dl_path, save_path in zip(dl_paths, save_paths):
+
+          # Prepare the user for what is going to happen
+          fileSize = resource.ftp.fileSize(dl_path)
+          message = ("Cloning: {path} - {size} MB"
+                     .format(path=save_path, size=fileSize))
+
           if args["--dry"]:
-            message = "Cloning: '{0}' to '{1}'".format(dl_path, save_path)
             hub.messenger.send("ghost", message)
 
           else:
-            # Prepare the user for what is going to happen
-            fileSize = resource.ftp.fileSize(dl_path)
-            message = ("Downloading: {path} - {size} MB"
-                       .format(path=save_path, size=fileSize))
-
             hub.messenger.send("update", message)
 
             # Commit to the download!
@@ -155,13 +163,17 @@ def main(args):
 
         if args["--save"] or args["update"]:
           # Add the user supplied data to the project YAML file
-          hub.project.add(resource_id, target)
+          hub.config.addResource(resource_id, target)
 
     if not args["--dry"]:
       # Save over the old "cosmid.yaml" file
-      hub.project.save()
+      hub.config.save()
       hub.history.save()
 
+
 if __name__ == "__main__":
-    args = docopt(__doc__, version="cosmid {v}".format(v=cosmid.__version__))
+    # Always initiate the registry!
+    hub = Registry()
+
+    args = docopt(__doc__, version=hub.messenger.welcome(cosmid.__version__))
     main(args)
