@@ -123,7 +123,7 @@ class Registry(object):
       options = resource.versions()
       version = self.matchOne(target, options)
 
-    if resource is None:
+    if version is None:
       message = ("Couldn't match version '{v}' to '{id}'; options: {vers}"
                  .format(v=target, id=resource.id, vers=", ".join(options)))
 
