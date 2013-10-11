@@ -15,8 +15,6 @@ There's a wealth of publicly available genomics resources; assemblies, database 
   $ cosmid init
 
 
-..  _getting-started:
-
 Getting started
 ----------------
 `Cosmid` relies on a YAML-formatted config file 'cosmid.yaml' in the current working directory. To create this file you can run:
@@ -46,7 +44,7 @@ There are a few ways to clone resources. The simplest is to specify the resource
 
 Adding "#" is how you specify a specific version version of the resource to download. Unless you specify a version, the latest release will be selected.
 
-It's recommended to create a project config file (see :ref:`getting-started`) where you store all the managed resources. This is useful as a separeate (and parsable) reference for the project "dependencies". You can also install all resources with a simple command:
+It's recommended to create a project config file (see *Getting started*) where you store all the managed resources. This is useful as a separeate (and parsable) reference for the project "dependencies". You can also install all resources with a simple command:
 
 .. code-block:: console
 

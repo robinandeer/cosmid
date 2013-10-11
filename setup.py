@@ -1,3 +1,20 @@
+#!/usr/bin/env python
+"""
+Cosmid - A genomics resource manager
+=====================================
+There's a wealth of publicly available genomics resources; assemblies, database dumps, sample data etc. Problem is, they are spread across various FTP servers all over the world. Cosmid can help you find, clone and manage resources, including a quick way to keep up-to-date on the latest releases.
+
+::
+
+  # Clone dependencies from './cosmid.yaml'
+  $ cosmid clone
+  # Clone a specific resource + target verion (optional)
+  $ cosmid clone <package>#<version>
+
+  # Walk through setting up a new 'cosmid.yaml' file
+  $ cosmid init
+"""
+
 # Bootstrap distribute unless already installed
 from distribute_setup import use_setuptools
 use_setuptools()
@@ -40,7 +57,7 @@ setup(
   author = "Robin Andeer",
   author_email = "robin.andeer@scilifelab.se",
   description = "A genomics resource manager",
-  long_description = (open('README.rst').read()),
+  long_description = __doc__,
   license = "MIT",
   keywords = "bioinformatics resource manager database genomics",
   url = "https://github.com/robinandeer/cosmid",
