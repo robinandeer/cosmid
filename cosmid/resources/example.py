@@ -2,6 +2,7 @@
 
 from ..resource import BaseResource
 from ..servers.gatk import GATK
+import sh
 
 
 class Resource(BaseResource):
@@ -33,3 +34,16 @@ class Resource(BaseResource):
     base = "{base}/{v}/exampleFASTA".format(base=self.baseUrl, v=version)
 
     return ["{base}/{file}".format(base=base, file=f) for f in self.names]
+
+  def postClone(self, cloned_files, target_dir, version):
+    """
+    Extracts the compressed archives.
+    """
+    # GZIP the files (and remove the archive)
+    for f in cloned_files:
+
+      # Only some of the files needs to be gzipped
+      if f.endswith(".gz"):
+        sh.gunzip(f)
+
+    return 0

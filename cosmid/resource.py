@@ -27,18 +27,34 @@ class BaseResource(object):
 
   def versions(self):
     """
-    Returns a list of version tags for availble resource versions.
+    <public> Returns a list of version tags for availble resource versions.
     """
     return []
 
   def latest(self):
     """
-    Returns the version tag for the latest availble version of the resource.
+    <public> Returns the version tag for the latest availble version of the
+    resource.
     """
     return ""
 
   def path(self, version):
     """
-    Returns the full download path matching the given ``version`` tag.
+    <public> Returns the full download path matching the given ``version`` tag.
     """
     return ""
+
+  def postClone(self, cloned_files, target_dir, version):
+    """
+    <public> This callback method will be called once the files in the resource
+    have been successfully downloaded. The paths to the files will be provided
+    as a list to the method.
+
+    This can be used as a way to rename, unzip, or concat files; generally
+    post process them to prepare them for the user.
+
+    :param list cloned_files: List of paths to the downloaded resource files
+    :param str target_dir: Path to resource directory
+    :param object version: Version of the resource that was downloaded
+    """
+    return 0

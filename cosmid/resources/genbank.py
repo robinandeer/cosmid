@@ -2,6 +2,7 @@
 
 from ..resource import BaseResource
 from ..servers.ncbi import NCBI
+import sh
 
 
 class Resource(BaseResource):
@@ -49,3 +50,17 @@ class Resource(BaseResource):
 
     # Should match each of the 24 chromosomes (not MT)
     return ["{base}/{file}".format(base=base, file=f) for f in files]
+
+  def postClone(self, cloned_files, target_dir, version):
+    # Start by extracting all the files
+    for f in cloned_files:
+      # GunZIP the file (and remove the archive)
+      sh.gunzip(f)
+
+    # Then let's concat them
+    target_path = "{}/Genbank.Homo_sapiens.fa".format(target_dir)
+    # Remove ".gz" ending to point to extracted files
+    cat_args = [f[:-3] for f in cloned_files]
+
+    # Execute the concatenation in the background and write to the target path
+    sh.cat(*cat_args, _out=target_path, _bg=True)

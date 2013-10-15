@@ -2,6 +2,7 @@
 
 from ..resource import BaseResource
 from ..servers.ensembl import Ensembl
+import sh
 
 
 class Resource(BaseResource):
@@ -36,3 +37,13 @@ class Resource(BaseResource):
     files = self.ftp.listFiles(base, "*.dna.primary_assembly.fa.gz")
 
     return ["{base}/{file}".format(base=base, file=files[0])]
+
+  def postClone(self, cloned_files, target_dir, version):
+    """
+    Extracts the downloaded assembly.
+    """
+    # GZIP and TAR the file and save to the target directory
+    for f in cloned_files:
+      sh.tar("-xzf", f, "-C", target_dir)
+
+    return 0

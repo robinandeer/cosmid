@@ -148,7 +148,7 @@ class Registry(object):
         "sources": dl_paths
       })
 
-      return resource, dl_paths, save_paths
+      return resource, dl_paths, save_paths, version
 
     else:
 
