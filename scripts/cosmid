@@ -3,7 +3,7 @@
 """Cosmid CLI
 
 Usage:
-  cosmid clone [<resource_id>...] [--save] [--dry]
+  cosmid clone [<resource_id>...] [--save] [--dl-only] [--dry]
   cosmid update [<resource_id>...]
   cosmid search <query>
   cosmid init
@@ -25,6 +25,7 @@ Options:
   -v --version        Show version
   -s --save           Add the successfully cloned resources to 'cosmid.yaml'
   -d --dry            Run in dry-mode keeping status quo
+  -do --dl-only       Skip post download processing (unzip, concat etc.)
 """
 from __future__ import print_function
 
@@ -131,7 +132,7 @@ def main(args):
     # -------------------------------------------------------
     for resource_id, target in resources.iteritems():
 
-      resource, dl_paths, save_paths = hub.grab(resource_id, target)
+      resource, dl_paths, save_paths, version = hub.grab(resource_id, target)
 
       if resource is None:
         # Something didn't add up... the user has been notified.
@@ -166,14 +167,21 @@ def main(args):
             # Commit to the download!
             resource.ftp.commit(dl_path, save_path)
 
+        if not args["--dl-only"]:
+          # Make the callback for post-cloning jobs
+          resource.postClone(save_paths, folder, version)
+
         if args["--save"] or args["update"]:
+          hub.messenger.send("update", "Processing downloaded files")
           # Add the user supplied data to the project YAML file
           hub.config.addResource(resource_id, target)
 
       # Save the config files for every resource
       if not args["--dry"]:
-        # Save over the old "cosmid.yaml" file
-        hub.config.save()
+        # Save *over* the old "cosmid.yaml" file
+        if hub.config_path.exists():
+          hub.config.save()
+
         hub.history.save()
 
 

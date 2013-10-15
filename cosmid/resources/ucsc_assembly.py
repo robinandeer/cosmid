@@ -3,6 +3,7 @@
 from __future__ import print_function
 from ..resource import BaseResource
 from ..servers.ucsc import UCSC
+import sh
 
 
 class Resource(BaseResource):
@@ -42,5 +43,21 @@ class Resource(BaseResource):
     else:
       return ["{base}/chromFa.zip".format(base=base)]
 
-      # This will be fixed in the future but for now...
-      print("N.B. Rename 'chromFa.tar.gz' to '.zip' before extracting!")
+  def postClone(self, cloned_files, target_dir, version):
+    """
+    Extracts the compressed archives.
+
+    .. versionadded:: 0.3.0
+    """
+    f = cloned_files[0]
+
+    if self.newer("hg18", version):
+      # GZIP and TAR the file and save to the target directory
+      sh.tar("-xzf", f, "-C", target_dir)
+
+    else:
+      # Rename to ".zip"
+      sh.mv(f, f.replace("tar.gz", "zip"))
+
+      # GunZIP the file (and remove the archive)
+      sh.gunzip(f)

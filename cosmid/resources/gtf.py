@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from ensembl_assembly import Resource as iResource
+import sh
 
 
 class Resource(iResource):
@@ -18,3 +19,16 @@ class Resource(iResource):
     files = self.ftp.listFiles(base, "*gtf.gz")
 
     return ["{base}/{file}".format(base=base, file=files[0])]
+
+  def postClone(self, cloned_files, target_dir, version):
+    """
+    Extracts the compressed archives.
+
+    .. versionadded:: 0.3.0
+    """
+    # GZIP the files (and remove the archive)
+    for f in cloned_files:
+
+      # Only some of the files needs to be gzipped
+      if f.endswith(".gz"):
+        sh.gunzip(f)

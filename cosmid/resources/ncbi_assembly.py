@@ -2,6 +2,8 @@
 
 from ..resource import BaseResource
 from ..servers.ncbi import NCBI
+import sh
+import subprocess
 
 
 class Resource(BaseResource):
@@ -56,3 +58,20 @@ class Resource(BaseResource):
 
     # Should only be one file that matches
     return ["{base}/{file}".format(base=base, file=f) for f in files]
+
+  def postClone(self, cloned_files, target_dir, version):
+    """
+    .. versionadded:: 0.3.0
+    """
+    # Start by extracting all the files
+    for f in cloned_files:
+      # GunZIP the file (and remove the archive)
+      sh.gunzip(f)
+
+    # Then let's concat them
+    target_path = "{}/NCBI.Homo_sapiens.fa".format(target_dir)
+    # Remove ".gz" ending to point to extracted files
+    cat_args = [f[:-3] for f in cloned_files]
+
+    # Execute the concatenation in the background and write to the target path
+    sh.cat(*cat_args, _out=target_path, _bg=True)
