@@ -52,6 +52,9 @@ class Resource(BaseResource):
     return ["{base}/{file}".format(base=base, file=f) for f in files]
 
   def postClone(self, cloned_files, target_dir, version):
+    """
+    .. versionadded:: 0.3.0
+    """
     # Start by extracting all the files
     for f in cloned_files:
       # GunZIP the file (and remove the archive)

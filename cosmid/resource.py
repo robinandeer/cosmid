@@ -56,5 +56,7 @@ class BaseResource(object):
     :param list cloned_files: List of paths to the downloaded resource files
     :param str target_dir: Path to resource directory
     :param object version: Version of the resource that was downloaded
+
+    .. versionadded:: 0.3.0
     """
     return 0

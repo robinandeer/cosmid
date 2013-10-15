@@ -38,6 +38,8 @@ class Resource(BaseResource):
   def postClone(self, cloned_files, target_dir, version):
     """
     Extracts the compressed archives.
+
+    .. versionadded:: 0.3.0
     """
     # GZIP the files (and remove the archive)
     for f in cloned_files:
