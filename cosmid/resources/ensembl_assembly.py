@@ -41,6 +41,8 @@ class Resource(BaseResource):
   def postClone(self, cloned_files, target_dir, version):
     """
     Extracts the downloaded assembly.
+
+    .. versionadded:: 0.3.0
     """
     # GZIP and TAR the file and save to the target directory
     for f in cloned_files:

@@ -46,6 +46,8 @@ class Resource(BaseResource):
   def postClone(self, cloned_files, target_dir, version):
     """
     Extracts the compressed archives.
+
+    .. versionadded:: 0.3.0
     """
     f = cloned_files[0]
 
