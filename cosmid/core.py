@@ -113,7 +113,7 @@ class Registry(object):
       message = "Couldn't match resource ID: '{}'".format(resource_id)
       self.messenger.send("warning", message)
 
-      return None, None, None
+      return None, None, None, None
     
     # Now let's figure out the version
     # No specified version will match to the latest resource release
@@ -129,7 +129,7 @@ class Registry(object):
 
       self.messenger.send("warning", message)
 
-      return None, None, None
+      return None, None, None, None
 
     # Get the goahead! (we haven't already downloaded it)
     if self.goahead(resource, version):
@@ -153,7 +153,7 @@ class Registry(object):
     else:
 
       # The resource was already downloaded
-      return None, None, None
+      return None, None, None, None
 
 
   def ls(self):
