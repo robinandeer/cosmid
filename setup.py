@@ -16,7 +16,7 @@ There's a wealth of publicly available genomics resources; assemblies, database 
 """
 
 # Bootstrap distribute unless already installed
-from distribute_setup import use_setuptools
+from cosmid.distribute_setup import use_setuptools
 use_setuptools()
 
 import os
