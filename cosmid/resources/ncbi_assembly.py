@@ -3,7 +3,6 @@
 from ..resource import BaseResource
 from ..servers.ncbi import NCBI
 import sh
-import subprocess
 
 
 class Resource(BaseResource):
@@ -25,7 +24,7 @@ class Resource(BaseResource):
 
     # First get versions from the archive (<=37.3)
     # Assemlies earlier than 35 are organized differently...
-    archive = [dirName.replace("BUILD.")
+    archive = [dirName.replace("BUILD.", "")
                for dirName in self.ftp.ls(self.baseUrl + "/ARCHIVE")
                if dirName.startswith("BUILD")
                and not dirName.startswith("BUILD.34")]

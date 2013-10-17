@@ -45,7 +45,8 @@ setup(
     "path.py",
     "pyyaml",
     "fuzzywuzzy",
-    "termcolor"
+    "termcolor",
+    "sh"
   ],
 
   # Packages required for testing

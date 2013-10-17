@@ -38,7 +38,7 @@ class BaseResource(object):
     """
     return ""
 
-  def path(self, version):
+  def paths(self, version):
     """
     <public> Returns the full download path matching the given ``version`` tag.
     """

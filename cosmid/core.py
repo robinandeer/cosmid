@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import ftputil
-import fnmatch
+from __future__ import division
+import ftplib
+from fnmatch import fnmatch
+from StringIO import StringIO
 import pkgutil
 from path import path
 from fuzzywuzzy import process
@@ -21,37 +23,53 @@ class FTP(object):
     self.username = username
     self.password = password
 
-    # Inheriting from the ftputil class doesn't seem to work - wrapping
-    # Connect to the FTP server
-    self.ftp = ftputil.FTPHost(url, username, password)
+    self.ftp = ftplib.FTP(url, username, password)
 
     # Shortcuts
-    self.ls = self.ftp.listdir
-    self.file = self.ftp.file
+    self.nlst = self.ftp.nlst
+    self.retrbinary = self.ftp.retrbinary
+    self.sendcmd = self.ftp.sendcmd
+    self.size = self.ftp.size
+
+  def ls(self, dir_path):
+    return [path.split("/")[-1] for path in self.nlst(dir_path)]
+
+  def file(self, path):
+    r = StringIO()
+
+    self.retrbinary("RETR " + path, r.write)
+
+    # Rewind the "file"
+    r.seek(0)
+
+    return r
 
   def fileSize(self, path):
-    return round(self.ftp.path.getsize(path) / float(1000000), 2)
+    # Switch to Binary mode (to be able to get size)
+    self.sendcmd("TYPE i")
+
+    return round(self.size(path)/1000000, 2)
 
   def listFiles(self, dirPath, pattern):
-    return [item for item in self.ftp.listdir(dirPath)
-            if fnmatch.fnmatch(item, pattern)]
+    return [item for item in self.ls(dirPath) if fnmatch(item, pattern)]
 
-  def commit(self, fullPath, dest):
+  def commit(self, fullPath, dest, mode=None):
     """
     Public: Saves a file from the server to the computer.
 
     :returns: 0: OK, >0: NOT OK
     """
     # Is the remote file gzipped? (Binary format)
-    # Expect all files are of the same format
-    if fullPath.endswith(".gz") or fullPath.endswith(".bam"):
-      mode = "b"
-    else:
-      # Default mode is to download non-binary files
-      mode = "a"
+    if mode is None:
+      if fullPath.endswith(".gz") or fullPath.endswith(".bam"):
+        mode = "b"
+      else:
+        # Default mode is to download non-binary files
+        mode = ""
 
-    # Initiate download of the file
-    self.ftp.download(fullPath, dest, mode)
+    # Open connection to the destination file and retrive the file
+    with open(dest, "w" + mode) as handle:
+      self.retrbinary("RETR " + fullPath, handle.write)
 
 
 class Registry(object):
@@ -107,14 +125,20 @@ class Registry(object):
     :param str target: What release of the resource to download
     """
     # Either import resource class or print warning and move on.
-    resource = self.get(resource_id)
+    # Test matching the resource ID
+    options = [item[0] for item in self.ls()]
+    resource_id = self.matchOne(resource_id, options)
 
-    if resource is None:
+    if resource_id is None:
+
       message = "Couldn't match resource ID: '{}'".format(resource_id)
       self.messenger.send("warning", message)
 
       return None, None, None, None
-    
+
+    # Get the resource
+    resource = self.get(resource_id)
+
     # Now let's figure out the version
     # No specified version will match to the latest resource release
     if target == "latest":
