@@ -167,7 +167,7 @@ def main(args):
             # Commit to the download!
             resource.ftp.commit(dl_path, save_path)
 
-        if not args["--dl-only"]:
+        if not (args["--dl-only"] and args["--dry"]):
           # Make the callback for post-cloning jobs
           resource.postClone(save_paths, folder, version)
 
