@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 from __future__ import division
+
 import ftplib
 from fnmatch import fnmatch
 from StringIO import StringIO
@@ -16,13 +17,33 @@ from messenger import Messenger
 
 
 class FTP(object):
-  """docstring for FTP"""
+  """
+  Model of a basic FTP server. Inherits a few methods from class:`ftplib.FTP`
+  as well as extends with a few new methods making it more like `ftputil`.
+
+  .. code-block::
+
+    >>> from cosmid.core import FTP
+    >>> ftp = FTP("ftp.ensembl.org", "anonymous", "")
+    >>> ftp.ls("")
+    ['ls-lR.gz',
+     '.message',
+     '.ok_to_rsync',
+     'pub',
+     ...
+    ]
+
+  :param str url: URL for the server to connect to
+  :param str username: Username for an account on the server
+  :param str password: Password to the accound on the server
+  """
   def __init__(self, url, username, password):
     super(FTP, self).__init__()
     self.url = url
     self.username = username
     self.password = password
 
+    # Connect to the FTP server
     self.ftp = ftplib.FTP(url, username, password)
 
     # Shortcuts
@@ -31,10 +52,27 @@ class FTP(object):
     self.sendcmd = self.ftp.sendcmd
     self.size = self.ftp.size
 
-  def ls(self, dir_path):
-    return [path.split("/")[-1] for path in self.nlst(dir_path)]
+  def ls(self, dir_path="."):
+    """
+    <public> Functions like `ls` in Unix where it lists the folders and files
+    in a specific directory. Compared to `nlst` it doesn't return the full
+    path for each file/folder.
+
+    :param str dir_path: (optional) Path to directory
+    :returns: List of files/folders in the directory
+    :rtype: list
+    """
+    return [path_.split("/")[-1] for path_ in self.nlst(dir_path)]
 
   def file(self, path):
+    """
+    <public> Open a file-like object for reading txt-files on the server
+    without downloading it locally first.
+
+    :param str path: Path to file
+    :returns: File-like object
+    :rtype: StringIO object
+    """
     r = StringIO()
 
     self.retrbinary("RETR " + path, r.write)
@@ -45,18 +83,37 @@ class FTP(object):
     return r
 
   def fileSize(self, path):
+    """
+    <public> Returns the file size of a certain file on the server in MB.
+
+    :param str path: Path to file
+    :returns: Size of file in megabytes
+    :rtype: int
+    """
     # Switch to Binary mode (to be able to get size)
     self.sendcmd("TYPE i")
 
     return round(self.size(path)/1000000, 2)
 
   def listFiles(self, dirPath, pattern):
+    """
+    <public> Like `ls` but has the option to match file/folder names to a
+    pattern.
+
+    :param str dirPath: Path to directory
+    :param str pattern: Glob-like pattern to match against files
+    :returns: List of files/folders in the directory matching the pattern
+    :rtype: list
+    """
     return [item for item in self.ls(dirPath) if fnmatch(item, pattern)]
 
   def commit(self, fullPath, dest, mode=None):
     """
-    Public: Saves a file from the server to the computer.
+    <public>: Saves a file from the server, locally in the `dest`.
 
+    :param str fullPath: Path from the cwd to the file to download
+    :param str dest: Local path+filename where you want to save the file
+    :param str mode: (optional) "b" for binary files
     :returns: 0: OK, >0: NOT OK
     """
     # Is the remote file gzipped? (Binary format)
@@ -73,7 +130,10 @@ class FTP(object):
 
 
 class Registry(object):
-  """docstring for Registry"""
+  """
+  Hub of-sorts to talk with different `Cosmid` related files and resources. Can
+  be seen as the API endpoint for `Cosmid`.
+  """
   def __init__(self):
     super(Registry, self).__init__()
 

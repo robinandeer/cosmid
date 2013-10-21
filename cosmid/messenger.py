@@ -51,28 +51,58 @@ class Messenger(object):
     """
     # Pythonic switch statement
     statement = {
-      "warning": self.warn(),
-      "error": self.error(),
-      "update": self.update(),
-      "ghost": self.ghost()
-    }.get(category, self.note())
+      "warning": self._warn(),
+      "error": self._error(),
+      "update": self._update(),
+      "ghost": self._ghost()
+    }.get(category, self._note())
 
     # Print the parts with tab-separation
     print("\t".join((self.sender, statement, message)))
 
     return self
 
-  def warn(self):
+  def _warn(self):
+    """
+    <private> Formats a yellow warning message.
+
+    :returns: Colored string
+    :rtype: str
+    """
     return colored("WARN", "yellow", attrs=["bold"])
 
-  def error(self):
+  def _error(self):
+    """
+    <private> Formats a red error message.
+
+    :returns: Colored string
+    :rtype: str
+    """
     return colored("ERROR", "red", attrs=["bold"])
 
-  def note(self):
+  def _note(self):
+    """
+    <private> Formats a white note.
+
+    :returns: Colored string
+    :rtype: str
+    """
     return colored("NOTE", "white", attrs=["bold"])
 
-  def update(self):
+  def _update(self):
+    """
+    <private> Formats a green update message.
+
+    :returns: Colored string
+    :rtype: str
+    """
     return colored("UPDATE", "green", attrs=["bold"])
 
-  def ghost(self):
+  def _ghost(self):
+    """
+    <private> Formats a transparent white note.
+
+    :returns: Colored string
+    :rtype: str
+    """
     return colored("NOTE", "white", attrs=["bold", "dark"])
