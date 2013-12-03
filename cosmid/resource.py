@@ -28,6 +28,9 @@ class BaseResource(object):
   def versions(self):
     """
     <public> Returns a list of version tags for availble resource versions.
+
+    :returns: List of supported resource releases
+    :rtype: list
     """
     return []
 
@@ -35,14 +38,32 @@ class BaseResource(object):
     """
     <public> Returns the version tag for the latest availble version of the
     resource.
+
+    :returns: The most up-to-date release tag
     """
     return ""
 
-  def path(self, version):
+  def newer(self, current, challenger):
+    """
+    <public> Compares two different version tags and returns ``True`` if the
+    `challenger` is newer than the `current` tag.
+
+    :param str current: Version tag to compare against
+    :param str challenger: Version tag to compare with
+    :returns: ANS: Challenger is newer than current
+    :rtype: bool
+    """
+    return current > challenger
+
+  def paths(self, version):
     """
     <public> Returns the full download path matching the given ``version`` tag.
+
+    :param str version: Version tag of the release
+    :returns: List of full paths for included files
+    :rtype: list
     """
-    return ""
+    return []
 
   def postClone(self, cloned_files, target_dir, version):
     """
