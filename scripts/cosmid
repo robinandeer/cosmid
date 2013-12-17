@@ -5,14 +5,16 @@
 Usage:
   cosmid clone [<resource_id>...] [--save] [--dl-only] [--dry]
   cosmid update [<resource_id>...]
-  cosmid search <query>
   cosmid init
+  cosmid list
+  cosmid search <query>
   cosmid (-h | --help)
   cosmid --version
 
 Commands:
   clone               Download a new resource(s) locally
   update              Update local resources to the latest version
+  list                List *all* available resources
   search              Search among the available resources
   init                Walk through setting up a basic project config file
 
@@ -52,6 +54,15 @@ def main(args):
     # Print each of the matches (top 5) to the console as updates
     for option in options:
       hub.messenger.send("note", option[0])
+
+  elif args["list"]:
+
+    # Explaination
+    print("\nAvailable resources (key - description):\n")
+
+    # Get a list of all resources
+    for item in hub.ls():
+      hub.messenger.send("note", "{0} - {1}".format(item[0], item[1]))
 
   elif args["init"]:
     # Help out with initializing a new project

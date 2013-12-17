@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""UCSC Human genome assembly."""
 
 from __future__ import print_function
 from ..resource import BaseResource

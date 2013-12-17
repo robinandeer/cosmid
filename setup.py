@@ -40,7 +40,6 @@ setup(
 
   # Project dependencies
   install_requires = [
-    "ftputil",
     "docopt",
     "path.py",
     "pyyaml",

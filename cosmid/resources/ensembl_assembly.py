@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Ensembl - automatically annotated human genome reference."""
 
 from ..resource import BaseResource
 from ..servers.ensembl import Ensembl

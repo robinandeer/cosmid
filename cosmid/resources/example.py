@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""A few example BAM/Fasta files for testing provided by GATK."""
 
 from ..resource import BaseResource
 from ..servers.gatk import GATK
