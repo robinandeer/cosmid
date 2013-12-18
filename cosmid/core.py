@@ -7,6 +7,7 @@ import ftplib
 from fnmatch import fnmatch
 from StringIO import StringIO
 import pkgutil
+import importlib
 from path import path
 from fuzzywuzzy import process
 
@@ -154,7 +155,7 @@ class Registry(object):
     # Set up a :class:`cosmid.messenger.Messenger`
     self.messenger = Messenger("cosmid")
 
-  def get(self, resource_id):
+  def get(self, resource_id, type_="class"):
     """
     <public> Returns an instance of the specified resource class. Dodges an
     ``ImportError`` when failing to import a resource and returns ``None``
@@ -170,12 +171,20 @@ class Registry(object):
     :returns: A class instance of the resource
     """
     try:
-      return load_class("cosmid.resources.{}.Resource".format(resource_id))()
+
+      if type_ == "class":
+        return load_class("cosmid.resources.{}.Resource".format(resource_id))()
+
+      elif type_ == "module":
+        return importlib.import_module("cosmid.resources." + resource_id)
+
+      else:
+          raise ValueError("Argument must be either 'class' or 'module'.")
 
     except ImportError:
       return None
 
-  def grab(self, resource_id, target):
+  def grab(self, resource_id, target, collapse=False):
     """
     <public> Returns all that's nessesary to download a specific resource.
     The method will try to correct both ``resource_id`` and the ``target``
@@ -220,8 +229,18 @@ class Registry(object):
 
       # Finally we can determine the paths to download and save the files
       dl_paths = resource.paths(version)
-      save_paths = [("{dir}/{id}/{file}"
-                     .format(dir=self.directory, id=resource.id, file=name))
+
+      if collapse:
+        # The user can select to store all downloaded files in the same
+        # directory
+        resource_dir = ""
+
+      else:
+        # Or by default separate different resources into subdirectories
+        resource_dir = "/" + resource.id
+
+      save_paths = [("{dir}{mid}/{file}"
+                     .format(dir=self.directory, mid=resource_dir, file=name))
                     for name in resource.names]
 
       # Add the resource to the history file as downloaded
@@ -238,7 +257,6 @@ class Registry(object):
 
       # The resource was already downloaded
       return None, None, None, None
-
 
   def ls(self):
     """
@@ -263,12 +281,15 @@ class Registry(object):
     modules = pkgutil.iter_modules(resources.__path__, prefix)
 
     # Loop over all resource modules
-    for importer, modname, ispkg in modules:
+    for importer, modpath, ispkg in modules:
+      # Strip path
+      modname = modpath.split(".")[-1]
+
       # Load the `Resource` class for the module
-      module = self.get(modname)
+      module = self.get(modname, type_="module")
 
       # Save name and docstring
-      items.append((modname.split(".")[-1], module.__doc__))
+      items.append((modname, module.__doc__))
 
     return items
 

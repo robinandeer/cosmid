@@ -182,4 +182,3 @@ class ConfigReader(DefaultReader):
 
     else:
       return resources.get(resource_id, default)
-

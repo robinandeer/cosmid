@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Human genes from Ensembl."""
 
 from ensembl_assembly import Resource as iResource
 import sh

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Ensembl - automatically annotated human genome reference."""
 
 from ..resource import BaseResource
 from ..servers.ensembl import Ensembl
@@ -46,6 +47,6 @@ class Resource(BaseResource):
     """
     # GZIP and TAR the file and save to the target directory
     for f in cloned_files:
-      sh.tar("-xzf", f, "-C", target_dir)
+      sh.gunzip(f)
 
     return 0

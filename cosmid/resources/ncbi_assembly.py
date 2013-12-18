@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""NCBI Human genome assembly."""
 
 from ..resource import BaseResource
 from ..servers.ncbi import NCBI

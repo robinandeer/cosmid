@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""
-dbSNP - genetic variation within and across different species
-"""
+"""1000 Genomes phase 1 indels from GATK."""
 
 # We can another GATK resource since it's pretty much the same
 from example import Resource as iResource

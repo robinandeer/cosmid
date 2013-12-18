@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""GenBank - reference human genome assembly."""
 
 from ..resource import BaseResource
 from ..servers.ncbi import NCBI

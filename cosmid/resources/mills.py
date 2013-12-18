@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""
-Mills and 1000G gold standard indels: a very stringently curated list of indels
-"""
+"""Mills and 1000G gold standard indels: a very stringently curated list of indels."""
 
 # We can another GATK resource since it's pretty much the same
 from example import Resource as iResource
