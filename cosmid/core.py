@@ -184,7 +184,7 @@ class Registry(object):
     except ImportError:
       return None
 
-  def grab(self, resource_id, target):
+  def grab(self, resource_id, target, collapse=False):
     """
     <public> Returns all that's nessesary to download a specific resource.
     The method will try to correct both ``resource_id`` and the ``target``
@@ -229,8 +229,18 @@ class Registry(object):
 
       # Finally we can determine the paths to download and save the files
       dl_paths = resource.paths(version)
-      save_paths = [("{dir}/{id}/{file}"
-                     .format(dir=self.directory, id=resource.id, file=name))
+
+      if collapse:
+        # The user can select to store all downloaded files in the same
+        # directory
+        resource_dir = ""
+
+      else:
+        # Or by default separate different resources into subdirectories
+        resource_dir = "/" + resource.id
+
+      save_paths = [("{dir}{mid}/{file}"
+                     .format(dir=self.directory, mid=resource_dir, file=name))
                     for name in resource.names]
 
       # Add the resource to the history file as downloaded
