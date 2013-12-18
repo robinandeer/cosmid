@@ -21,6 +21,12 @@ There's a wealth of publicly available genomics resources; assemblies, database 
 
 Getting started
 ----------------
+You can easily install `Cosmid` by running:
+
+.. code-block:: console
+  
+  $ pip install cosmid
+
 `Cosmid` relies on a YAML-formatted config file 'cosmid.yaml' in the current working directory. To create this file you can run:
 
 .. code-block:: console
