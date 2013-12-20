@@ -16,8 +16,13 @@ class Resource(iResource):
     self.names = ["dbsnp_137.vcf.gz"]
 
   def paths(self, version):
+    if version == self.latest():
+      num = "138"
+    else:
+      num = "137"
+
     # 1 file
     base = "{base}/{v}/b37".format(base=self.baseUrl, v=version)
-    f = "dbsnp_137.b37.vcf.gz"
+    f = "dbsnp_{num}.b37.vcf.gz".format(num=num)
 
     return ["{base}/{file}".format(base=base, file=f)]
