@@ -154,13 +154,6 @@ def main(args):
         # Something didn't add up... the user has already been notified.
         continue
 
-      # Also check if the resource has already been cloned
-      existing_resource = hub.history.find(resource_id)
-      if existing_resource and existing_resource['version'] == version:
-        message = "{} is already up-to-date.".format(resource_id)
-        hub.messenger.send("update", message)
-        continue
-
       # Path to actual save location for the resource
       if not hub.directory.exists():
         # Create it!
