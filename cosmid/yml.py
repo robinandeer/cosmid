@@ -128,10 +128,16 @@ class HistoryReader(DefaultReader):
     :returns: A dict with ``{ resource_id: version_tag }``
     :rtype: dict
     """
-    # Exclude perfect target<->version matches
-    # If force is selected we include all resources
-    return {key:item["target"] for key, item in self.items.iteritems()
-            if item["target"] != item["version"] or force}
+    resources = {}
+    for key, item in self.items.iteritems():
+
+      # Exclude perfect target<->version matches
+      # Always include resources with target=latest
+      # If force is selected we include all resources
+      if item['target'] != item['version'] or force:
+        resources[key] = item['target']
+
+    return resources
 
 
 class ConfigReader(DefaultReader):

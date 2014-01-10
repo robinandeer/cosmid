@@ -146,60 +146,66 @@ def main(args):
     #  Download each of the resources
     # -------------------------------------------------------
     for resource_id, target in resources.iteritems():
-
+      # Fetch info needed to download a single resource
       resource, dl_paths, save_paths, version = hub.grab(resource_id, target,
                                                          collapse=collapse)
 
       if resource is None:
-        # Something didn't add up... the user has been notified.
+        # Something didn't add up... the user has already been notified.
         continue
 
-      else:
-        # Path to actual save location for the resource
-        if not hub.directory.exists():
-          # Create it!
-          hub.directory.mkdir()
+      # Also check if the resource has already been cloned
+      existing_resource = hub.history.find(resource_id)
+      if existing_resource and existing_resource['version'] == version:
+        message = "{} is already up-to-date.".format(resource_id)
+        hub.messenger.send("update", message)
+        continue
 
-        # Path to actual save location for the resource
-        if collapse:
-          # The user has choosen to save all files in the same base directory
-          folder = path(hub.directory)
+      # Path to actual save location for the resource
+      if not hub.directory.exists():
+        # Create it!
+        hub.directory.mkdir()
+
+      # Path to actual save location for the resource
+      if collapse:
+        # The user has choosen to save all files in the same base directory
+        folder = path(hub.directory)
+
+      else:
+        # The user wants to separate each resource in it's corresponding
+        # directory
+        folder = path("{dest}/{id}".format(dest=hub.directory,
+                                           id=resource.id))
+
+      if not folder.exists() and not args["--dry"]:
+        # Create it!
+        folder.mkdir()
+
+      # Download each file belonging to the resource
+      for dl_path, save_path in zip(dl_paths, save_paths):
+
+        # Prepare the user for what is going to happen
+        fileSize = resource.ftp.fileSize(dl_path)
+        message = ("Cloning: {path} - {size} MB"
+                   .format(path=save_path, size=fileSize))
+
+        if args["--dry"]:
+          hub.messenger.send("ghost", message)
 
         else:
-          # The user wants to separate each resource in it's corresponding
-          # directory
-          folder = path("{dest}/{id}".format(dest=hub.directory,
-                                             id=resource.id))
+          hub.messenger.send("update", message)
 
-        if not folder.exists() and not args["--dry"]:
-          # Create it!
-          folder.mkdir()
+          # Commit to the download!
+          resource.ftp.commit(dl_path, save_path)
 
-        # Download each file belonging to the resource
-        for dl_path, save_path in zip(dl_paths, save_paths):
+      if not (args["--dl-only"] and args["--dry"]):
+        # Make the callback for post-cloning jobs
+        resource.postClone(save_paths, folder, version)
 
-          # Prepare the user for what is going to happen
-          fileSize = resource.ftp.fileSize(dl_path)
-          message = ("Cloning: {path} - {size} MB"
-                     .format(path=save_path, size=fileSize))
-
-          if args["--dry"]:
-            hub.messenger.send("ghost", message)
-
-          else:
-            hub.messenger.send("update", message)
-
-            # Commit to the download!
-            resource.ftp.commit(dl_path, save_path)
-
-        if not (args["--dl-only"] and args["--dry"]):
-          # Make the callback for post-cloning jobs
-          resource.postClone(save_paths, folder, version)
-
-        if args["--save"] or args["update"]:
-          hub.messenger.send("update", "Processing downloaded files")
-          # Add the user supplied data to the project YAML file
-          hub.config.addResource(resource_id, target)
+      if args["--save"] or args["update"]:
+        hub.messenger.send("update", "Processing downloaded files")
+        # Add the user supplied data to the project YAML file
+        hub.config.addResource(resource_id, target)
 
       # Save the config files for every resource
       if not args["--dry"]:
