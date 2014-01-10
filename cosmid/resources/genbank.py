@@ -25,15 +25,23 @@ class Resource(BaseResource):
     return [dirName for dirName in self.ftp.listFiles(self.baseUrl, "GRCh*")]
 
   def latest(self):
-    # Extract assembly and path number
+    # Extract assembly and patch number
     versions = [(int(v[4:6]), int(v[8:] or 0)) for v in self.versions()]
 
     # Sort based on assembly and patch => return the last item
     combo = sorted(versions, key=lambda x: (x[0], x[1]))[-1]
-    return "GRCh{v}.p{patch}".format(v=combo[0], patch=combo[1])
+
+    # Compose version string
+    version = "GRCh{v}".format(v=combo[0], patch=combo[1])
+
+    # Only add patch extention for numbers > 0
+    if combo[1] > 0:
+      version += ".p" + combo[1]
+
+    return version
 
   def newer(self, current, challenger):
-    # Extract assembly and path number
+    # Extract assembly and patch number
     combos = [(int(v[4:6]), int(v[8:] or 0)) for v in (current, challenger)]
 
     # If the assemblies differ

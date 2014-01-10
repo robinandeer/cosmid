@@ -11,6 +11,11 @@ v0.4.0
 -----------------
 * Larger rewrite to skip FTPutil-dependency
 * API is still mostly the same
-* NEW: Cosmid auto attempts matching ressource ids
+* NEW: Cosmid auto attempts matching resource ids
 * FIXED: a few bugs
 * ADDED: inline docs
+
+v0.4.3
+----------------
+* Fixes a bug related to the Genbank resource
+* Fixes a bigger bug related to checking whether to update a resource 
