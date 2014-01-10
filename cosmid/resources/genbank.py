@@ -35,7 +35,7 @@ class Resource(BaseResource):
     version = "GRCh{v}".format(v=combo[0], patch=combo[1])
 
     # Only add patch extention for numbers > 0
-    if combo[1] > 0:
+    if combo[1] != 0:
       version += ".p" + combo[1]
 
     return version

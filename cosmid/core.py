@@ -224,7 +224,7 @@ class Registry(object):
 
       return None, None, None, None
 
-    # Get the goahead! (we haven't already downloaded it)
+    # Get the goahead! (that we haven't already downloaded it)
     if self.goahead(resource, version):
 
       # Finally we can determine the paths to download and save the files
@@ -354,12 +354,11 @@ class Registry(object):
     # Get any currently downloaded resources
     current = self.history.find(resource.id, default={})
 
-    # Make sure we haven't already download the resource
-    if version == current.get("version"):
-      message = "Resource already downloaded: '{id}'".format(id=resource.id)
+    # Make sure we haven't already downloaded the resource
+    if current.get("version") == version:
+      message = "'{}' already downloaded and up-to-date.".format(resource.id)
       self.messenger.send("update", message)
 
       return False
 
     return True
-
