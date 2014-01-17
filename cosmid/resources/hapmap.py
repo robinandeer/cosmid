@@ -10,7 +10,7 @@ class Resource(iResource):
   def __init__(self):
     super(Resource, self).__init__()
 
-    self.id = "indels"
+    self.id = "hapmap"
 
     self.parts = 1
     self.names = ["hapmap_3.3.vcf.gz"]
