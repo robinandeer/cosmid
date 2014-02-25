@@ -13,7 +13,8 @@ class Resource(BaseResource):
     self.id = "decoy"
 
     self.ftp = ThousandG()
-    self.baseUrl = "1000genomes/ftp/technical/reference/phase2_reference_assembly_sequence"
+    self.baseUrl = "1000genomes/ftp/technical/reference/"
+                   "phase2_reference_assembly_sequence"
 
     self.parts = 1
     self.names = ["hs37d5.fa.gz"]

@@ -27,12 +27,12 @@ class Messenger(object):
     v = "=================| version {} |================".format(version)
 
     ascii = """
-     .o88b.  .d88b.  .d8888. .88b  d88. d888888b d8888b. 
-    d8P  Y8 .8P  Y8. 88'  YP 88'YbdP`88   `88'   88  `8D 
-    8P      88    88 `8bo.   88  88  88    88    88   88 
-    8b      88    88   `Y8b. 88  88  88    88    88   88 
-    Y8b  d8 `8b  d8' db   8D 88  88  88   .88.   88  .8D 
-     `Y88P'  `Y88P'  `8888Y' YP  YP  YP Y888888P Y8888D' 
+     .o88b.  .d88b.  .d8888. .88b  d88. d888888b d8888b.
+    d8P  Y8 .8P  Y8. 88'  YP 88'YbdP`88   `88'   88  `8D
+    8P      88    88 `8bo.   88  88  88    88    88   88
+    8b      88    88   `Y8b. 88  88  88    88    88   88
+    Y8b  d8 `8b  d8' db   8D 88  88  88   .88.   88  .8D
+     `Y88P'  `Y88P'  `8888Y' YP  YP  YP Y888888P Y8888D'
 
      {}
     """.format(colored(v, "white"))

@@ -16,8 +16,11 @@ class Resource(iResource):
     self.names = ["Mills_and_1000G_gold_standard.indels.vcf.gz"]
 
   def paths(self, version):
+    bundle_id, assembly = self.defineVersion(version)
+
     # 1 file
-    base = "{base}/{v}/b37".format(base=self.baseUrl, v=version)
-    f = "Mills_and_1000G_gold_standard.indels.b37.vcf.gz".format(version)
+    base = "{base}/{bundle}/{assembly}"\
+           .format(base=self.baseUrl, bundle=bundle_id, assembly=assembly)
+    f = "Mills_and_1000G_gold_standard.indels.{}.vcf.gz".format(assembly)
 
     return ["{base}/{file}".format(base=base, file=f)]

@@ -75,4 +75,4 @@ class Resource(BaseResource):
     cat_args = [f[:-3] for f in cloned_files]
 
     # Execute the concatenation in the background and write to the target path
-    sh.cat(*cat_args, _out=target_path, _bg=True)
+    sh.cat(*cat_args, _out=target_path)

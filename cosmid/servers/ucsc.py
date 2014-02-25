@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from ..core import FTP
 
+
 class UCSC(FTP):
   """docstring for UCSC"""
   def __init__(self):
