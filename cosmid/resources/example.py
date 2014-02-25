@@ -23,6 +23,26 @@ class Resource(BaseResource):
   def versions(self):
     return [float(dirName) for dirName in self.ftp.ls(self.baseUrl)]
 
+  def defineVersion(version_tag, assembly='b37'):
+    """
+    <public> Determines the tuple representing the 'version' of a GATK bundle
+    resource.
+
+    .. versionadded:: 0.4.7
+
+    :param str version_tag: The version string input by user
+    :param str assembly: (optional) The default assembly to use if not
+                         provided by user
+    :returns: Tuple with bundle_id and assembly
+    """
+    version_parts = version_tag.split('/')
+    bundle_id = version_parts[0]
+
+    if '/' in version_tag:
+      assembly = version_parts[1]
+
+    return bundle_id, assembly
+
   def latest(self):
     return max(self.versions())
 
@@ -31,8 +51,10 @@ class Resource(BaseResource):
     return float(challenger) > float(current)
 
   def paths(self, version):
+    bundle_id, assembly = self.defineVersion(version)
+
     # 4 files
-    base = "{base}/{v}/exampleFASTA".format(base=self.baseUrl, v=version)
+    base = "{base}/{v}/exampleFASTA".format(base=self.baseUrl, v=bundle_id)
 
     return ["{base}/{file}".format(base=base, file=f) for f in self.names]
 

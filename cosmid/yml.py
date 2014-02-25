@@ -49,7 +49,7 @@ class DefaultReader(object):
         self.items = yaml.safe_load(handle.read())
 
     else:
-      # Initialize empty 
+      # Initialize empty
       self.items = {}
 
     return self

@@ -16,8 +16,11 @@ class Resource(iResource):
     self.names = ["hapmap_3.3.vcf.gz"]
 
   def paths(self, version):
+    bundle_id, assembly = self.defineVersion(version)
+
     # 1 file
-    base = "{base}/{v}/b37".format(base=self.baseUrl, v=version)
-    f = "hapmap_3.3.b37.vcf.gz"
+    base = "{base}/{bundle}/{assembly}"\
+           .format(base=self.baseUrl, bundle=bundle_id, assembly=assembly)
+    f = "hapmap_3.3.{}.vcf.gz".format(assembly)
 
     return ["{base}/{file}".format(base=base, file=f)]

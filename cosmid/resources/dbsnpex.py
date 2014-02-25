@@ -13,11 +13,20 @@ class Resource(iResource):
     self.id = "dbsnpex"
 
     self.parts = 1
-    self.names = ["dbsnp_137.excluding_sites_after_129.vcf.gz"]
+    self.names = ['dbsnp_137.excluding_sites_after_129.vcf.gz']
 
   def paths(self, version):
+    bundle_id, assembly = self.defineVersion(version)
+
+    if bundle_id == self.latest():
+      num = "138"
+    else:
+      num = "137"
+
     # 1 file
-    base = "{base}/{v}/b37".format(base=self.baseUrl, v=version)
-    f = "dbsnp_137.b37.excluding_sites_after_129.vcf.gz"
+    base = "{base}/{bundle}/{assembly}"\
+           .format(base=self.baseUrl, bundle=bundle_id, assembly=assembly)
+    f = "dbsnp_{num}.{assembly}.excluding_sites_after_129.vcf.gz"\
+        .format(num=num, assembly=assembly)
 
     return ["{base}/{file}".format(base=base, file=f)]

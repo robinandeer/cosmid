@@ -10,14 +10,17 @@ class Resource(iResource):
   def __init__(self):
     super(Resource, self).__init__()
 
-    self.id = "1000g"
+    self.id = "1000g_omni"
 
     self.parts = 1
-    self.names = ["1000G_omni.vcf.gz"]
+    self.names = ['1000G_omni.vcf.gz']
 
   def paths(self, version):
     # 1 file
-    base = "{base}/{v}/b37".format(base=self.baseUrl, v=version)
-    f = "1000G_omni2.5.b37.vcf.gz"
+    bundle_id, assembly = self.defineVersion(version)
+    base = "{base}/{bundle}/{assembly}".format(base=self.baseUrl,
+                                               bundle=bundle_id,
+                                               assembly=assembly)
+    f = "1000G_omni2.5.{}.vcf.gz".format(assembly)
 
     return ["{base}/{file}".format(base=base, file=f)]
