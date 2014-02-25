@@ -19,3 +19,7 @@ v0.4.3
 ----------------
 * Fixes a bug related to the Genbank resource
 * Fixes a bigger bug related to checking whether to update a resource 
+
+v0.4.6
+---------------
+* Fixes a number of bugs with GATK bundle resources
