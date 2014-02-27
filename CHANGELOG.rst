@@ -23,3 +23,7 @@ v0.4.3
 v0.4.6
 ---------------
 * Fixes a number of bugs with GATK bundle resources
+
+v0.4.8
+---------------
+* Fixes a bug that causes cosmid to crash (#26)
