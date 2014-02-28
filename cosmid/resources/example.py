@@ -21,9 +21,15 @@ class Resource(BaseResource):
                   "exampleFASTA.fasta.fai.gz", "exampleFASTA.fasta.gz"]
 
   def versions(self):
-    return [float(dirName) for dirName in self.ftp.ls(self.baseUrl)]
+    assemblies = ['b36', 'b37', 'hg18', 'hg19']
+    versions = self.ftp.ls(self.baseUrl)
+    options = []
+    for version in versions:
+      for assembly in assemblies:
+        options.append("{}/{}".format(version, assembly))
+    return options
 
-  def defineVersion(version_tag, assembly='b37'):
+  def defineVersion(self, version_tag, assembly='b37'):
     """
     <public> Determines the tuple representing the 'version' of a GATK bundle
     resource.
@@ -44,11 +50,11 @@ class Resource(BaseResource):
     return bundle_id, assembly
 
   def latest(self):
-    return max(self.versions())
+    return max([float(v.split('/')[0]) for v in self.versions()])
 
   def newer(self, current, challenger):
     # Simply check which float is biggest
-    return float(challenger) > float(current)
+    return float(challenger.split('/')[0]) > float(current.split('/')[0])
 
   def paths(self, version):
     bundle_id, assembly = self.defineVersion(version)
