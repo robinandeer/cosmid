@@ -226,7 +226,6 @@ class Registry(object):
 
     # Get the goahead! (that we haven't already downloaded it)
     if self.goahead(resource, version):
-
       # Finally we can determine the paths to download and save the files
       dl_paths = resource.paths(version)
 
