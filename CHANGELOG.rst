@@ -31,3 +31,7 @@ v0.4.8
 v0.4.9
 ---------------
 * Fixes a few bugs related to the new GATK bundle version support (#27)
+
+v0.4.9.1
+---------------
+* Fixes bug in naming dbSNP resource download path (137/138)

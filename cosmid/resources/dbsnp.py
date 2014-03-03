@@ -18,10 +18,10 @@ class Resource(iResource):
   def paths(self, version):
     bundle_id, assembly = self.defineVersion(version)
 
-    if bundle_id == self.latest():
-      num = "138"
+    if float(bundle_id) == self.latest():
+      num = '138'
     else:
-      num = "137"
+      num = '137'
 
     # 1 file
     base = "{base}/{bundle}/{assembly}".format(base=self.baseUrl,
